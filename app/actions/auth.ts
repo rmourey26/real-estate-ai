@@ -1,84 +1,127 @@
 "use server"
 
-import { createServerClientForSSR } from "@/lib/supabase-server"
-import { userSchema } from "@/lib/schemas"
-import * as z from "zod"
+import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
+import { LoginFormSchema, SignupFormSchema } from "@/lib/schemas/auth"
+import { revalidatePath } from "next/cache"
 
-const signUpSchema = userSchema.extend({
-  password: z.string().min(8, "Password must be at least 8 characters long"),
-})
-
-export async function signUp(formData: z.infer<typeof signUpSchema>) {
+export async function login(formData: unknown) {
   try {
-    const validatedData = signUpSchema.parse(formData)
+    // Validate form data
+    const result = LoginFormSchema.safeParse(formData)
 
-    // Ensure website has http/https prefix if provided
-    let website = validatedData.website
-    if (website && !website.startsWith("http")) {
-      website = `https://${website}`
+    if (!result.success) {
+      return { error: "Invalid form data", details: result.error.format() }
     }
 
-    // Ensure linkedin_url has http/https prefix if provided
-    let linkedinUrl = validatedData.linkedin_url
-    if (linkedinUrl && !linkedinUrl.startsWith("http")) {
-      linkedinUrl = `https://${linkedinUrl}`
+    const { email, password } = result.data
+
+    const supabase = createClient()
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    })
+
+    if (error) {
+      return { error: error.message }
     }
 
-    const supabase = await createServerClientForSSR()
+    revalidatePath("/", "layout")
+    redirect("/dashboard")
+  } catch (error) {
+    console.error("Login error:", error)
+    return { error: "An unexpected error occurred" }
+  }
+}
 
-    const { data, error } = await supabase.auth.signUp({
-      email: validatedData.email,
-      password: validatedData.password,
+export async function signup(formData: unknown) {
+  try {
+    // Validate form data
+    const result = SignupFormSchema.safeParse(formData)
+
+    if (!result.success) {
+      return { error: "Invalid form data", details: result.error.format() }
+    }
+
+    const { email, password, fullName } = result.data
+
+    const supabase = createClient()
+
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
       options: {
         data: {
-          full_name: validatedData.full_name,
-          company: validatedData.company,
-          job_title: validatedData.job_title || "",
-          website: website,
-          linkedin_url: linkedinUrl || "",
-          avatar_url: validatedData.avatar_url || "",
-          company_logo_url: validatedData.company_logo_url || "",
+          full_name: fullName,
         },
+        emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm`,
       },
     })
 
-    if (error) throw error
-
-    // Create a profile record immediately after signup
-    try {
-      const { error: profileError } = await supabase.from("profiles").insert({
-        id: data.user?.id,
-        user_id: data.user?.id,
-        full_name: validatedData.full_name,
-        email: validatedData.email,
-        company: validatedData.company,
-        job_title: validatedData.job_title || "",
-        website: website,
-        linkedin_url: linkedinUrl || "",
-        avatar_url: validatedData.avatar_url || "",
-        company_logo_url: validatedData.company_logo_url || "",
-        username: validatedData.full_name.toLowerCase().replace(/\s+/g, "_"),
-        updated_at: new Date().toISOString(),
-      })
-
-      if (profileError) {
-        console.error("Error creating profile:", profileError)
-        // Continue even if profile creation fails, as it will be created later
-      }
-    } catch (profileError) {
-      console.error("Error creating profile:", profileError)
-      // Continue even if profile creation fails
+    if (error) {
+      return { error: error.message }
     }
 
-    return { success: true, message: "Account created successfully" }
+    return { success: true }
   } catch (error) {
-    console.error("Error signing up:", error)
-    if (error instanceof z.ZodError) {
-      return { success: false, message: error.errors[0].message }
-    } else if (error instanceof Error) {
-      return { success: false, message: error.message }
-    } else {
-      return { success: false, message: "There was an error creating your account. Please try again." }
-    }
+    console.error("Signup error:", error)
+    return { error: "An unexpected error occurred" }
   }
+}
+
+// Keep the original function for backward compatibility
+export async function signIn(formData: FormData) {
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+
+  const supabase = createClient()
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return redirect("/dashboard")
+}
+
+// Keep the original function for backward compatibility
+export async function signUp(formData: FormData) {
+  const email = formData.get("email") as string
+  const password = formData.get("password") as string
+
+  const supabase = createClient()
+
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/confirm`,
+    },
+  })
+
+  if (error) {
+    return { error: error.message }
+  }
+
+  return { success: true }
+}
+
+// Implement both signout and signOut for backward compatibility
+export async function signout() {
+  const supabase = createClient()
+  await supabase.auth.signOut()
+  revalidatePath("/", "layout")
+  redirect("/login")
+}
+
+// Export signOut to fix the deployment error
+export async function signOut() {
+  const supabase = createClient()
+  await supabase.auth.signOut()
+  return redirect("/login")
 }

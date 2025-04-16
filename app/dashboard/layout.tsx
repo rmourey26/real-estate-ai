@@ -1,24 +1,29 @@
 import type React from "react"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { Suspense } from "react"
+import Sidebar from "@/components/dashboard/sidebar"
+import Header from "@/components/dashboard/header"
 import { redirect } from "next/navigation"
-import { ClientProviders } from "@/components/client-providers"
+import { createClient } from "@/utils/supabase/server"
 
-export default async function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
-  const supabase = createServerSupabaseClient()
-
-  // Get the current user
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = createClient()
   const {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // If no user, redirect to login
   if (!user) {
     redirect("/login")
   }
 
-  return <ClientProviders>{children}</ClientProviders>
+  return (
+    <div className="flex min-h-screen">
+      <Sidebar className="hidden md:block w-64 border-r" />
+      <div className="flex-1">
+        <Suspense fallback={<div className="h-16 border-b"></div>}>
+          <Header />
+        </Suspense>
+        <main className="p-4">{children}</main>
+      </div>
+    </div>
+  )
 }
