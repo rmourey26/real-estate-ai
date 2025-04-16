@@ -16,7 +16,7 @@ importers:
         version: 1.2.7(zod@3.24.2)
       '@ai-sdk/openai':
         specifier: latest
-        version: 1.3.14(zod@3.24.2)
+        version: 1.3.15(zod@3.24.2)
       '@hookform/resolvers':
         specifier: latest
         version: 5.0.1(react-hook-form@7.55.0(react@19.0.0))
@@ -112,7 +112,7 @@ importers:
         version: 0.5.16(tailwindcss@3.4.17)
       ai:
         specifier: latest
-        version: 4.3.8(react@19.0.0)(zod@3.24.2)
+        version: 4.3.9(react@19.0.0)(zod@3.24.2)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.0.0)
@@ -210,8 +210,8 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/openai@1.3.14':
-    resolution: {integrity: sha512-mY5tU3QOktt6Qib3GwWN43pRxW01sP1IM4M6eieUAEDRXIiFcRb5fdmL2AZ8RK8AjAgzZRPRDxk/NN0gybwjRA==}
+  '@ai-sdk/openai@1.3.15':
+    resolution: {integrity: sha512-sjUM1A+Pwui+fAn4kmBfVyhJGhqIbsqNzERNPmtRKRBhYG7p946+DTmbJ4lsZG+r4+kMn87aDCYyRexnsnbu5g==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -1213,8 +1213,8 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
-  ai@4.3.8:
-    resolution: {integrity: sha512-94iuXn+/I1X6v8I+9nycuHCv3RjtI9UqALw3UfANwaxOGEPtITfImfQg4DAR+3asnJViJ/IdCpWbTyzVXjHWPQ==}
+  ai@4.3.9:
+    resolution: {integrity: sha512-P2RpV65sWIPdUlA4f1pcJ11pB0N1YmqPVLEmC4j8WuBwKY0L3q9vGhYPh0Iv+spKHKyn0wUbMfas+7Z6nTfS0g==}
     engines: {node: '>=18'}
     peerDependencies:
       react: ^18 || ^19 || ^19.0.0-rc
@@ -2110,7 +2110,7 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/openai@1.3.14(zod@3.24.2)':
+  '@ai-sdk/openai@1.3.15(zod@3.24.2)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)
@@ -3120,7 +3120,7 @@ snapshots:
     dependencies:
       '@types/node': 22.0.0
 
-  ai@4.3.8(react@19.0.0)(zod@3.24.2):
+  ai@4.3.9(react@19.0.0)(zod@3.24.2):
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.7(zod@3.24.2)

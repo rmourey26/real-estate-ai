@@ -1,31 +1,47 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { generateInvestmentStrategy } from "@/lib/ai/agent-system"
-import { InvestmentStrategySchema } from "@/lib/schemas/investment"
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
+    const { region, budget, investmentGoals, timeHorizon, riskTolerance } = body
 
-    // Validate request body
-    const result = InvestmentStrategySchema.safeParse(body)
-
-    if (!result.success) {
-      return NextResponse.json({ error: "Invalid request parameters", details: result.error.format() }, { status: 400 })
+    if (!region) {
+      return NextResponse.json({ error: "Region parameter is required" }, { status: 400 })
     }
 
-    const { region, budget, investmentGoals, timeHorizon, riskTolerance } = result.data
+    try {
+      const result = await generateInvestmentStrategy({
+        region,
+        budget: budget || 250000,
+        investmentGoals: investmentGoals || "Balanced approach (cash flow and appreciation)",
+        timeHorizon: timeHorizon || "Medium-term (3-5 years)",
+        riskTolerance: riskTolerance || "Moderate",
+      })
 
-    const strategyResult = await generateInvestmentStrategy({
-      region,
-      budget,
-      investmentGoals,
-      timeHorizon,
-      riskTolerance,
-    })
+      return NextResponse.json({ strategy: result.investmentStrategy })
+    } catch (error) {
+      console.error("Error generating investment strategy:", error)
 
-    return NextResponse.json({ strategy: strategyResult.investmentStrategy })
+      // Return a more helpful error message
+      return NextResponse.json(
+        {
+          error: "Failed to generate investment strategy",
+          message:
+            "The AI service is currently unavailable. Please try again later or contact support if the issue persists.",
+          details: error instanceof Error ? error.message : String(error),
+        },
+        { status: 500 },
+      )
+    }
   } catch (error) {
     console.error("Error in investment strategy API route:", error)
-    return NextResponse.json({ error: "Failed to generate investment strategy" }, { status: 500 })
+    return NextResponse.json(
+      {
+        error: "Failed to process request",
+        message: "There was an error processing your request. Please check your input and try again.",
+      },
+      { status: 500 },
+    )
   }
 }

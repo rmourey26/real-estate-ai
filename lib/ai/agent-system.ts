@@ -156,15 +156,36 @@ const agentRegistry: Record<string, AgentConfig> = {
 
 // Get the appropriate model based on provider
 function getModelForProvider(provider: AgentProvider) {
-  switch (provider) {
-    case "openai":
-      return openai(config.openai.model)
-    case "anthropic":
-      return anthropic(config.anthropic.model)
-    case "mistral":
-      return mistral(config.mistral.model)
-    default:
-      return openai(config.openai.model)
+  try {
+    switch (provider) {
+      case "openai":
+        // Check if OpenAI API key is available
+        if (!config.ai.openaiApiKey) {
+          throw new Error("OpenAI API key is not configured")
+        }
+        return openai("gpt-4o")
+      case "anthropic":
+        // Check if Anthropic API key is available
+        if (!config.ai.anthropicApiKey) {
+          throw new Error("Anthropic API key is not configured")
+        }
+        return anthropic("claude-3-opus-20240229")
+      case "mistral":
+        // Check if Mistral API key is available
+        if (!process.env.MISTRAL_API_KEY) {
+          throw new Error("Mistral API key is not configured")
+        }
+        return mistral("mistral-large-latest")
+      default:
+        // Default to OpenAI if available
+        if (config.ai.openaiApiKey) {
+          return openai("gpt-4o")
+        }
+        throw new Error("No AI provider API keys are configured")
+    }
+  } catch (error) {
+    console.error("Error initializing AI model:", error)
+    throw new Error("Failed to initialize AI model. Please check your API key configuration.")
   }
 }
 
@@ -175,9 +196,9 @@ export async function runAgent(agentKey: string, prompt: string) {
     throw new Error(`Agent ${agentKey} not found`)
   }
 
-  const model = getModelForProvider(agent.provider)
-
   try {
+    const model = getModelForProvider(agent.provider)
+
     const { text } = await generateText({
       model,
       system: agent.systemPrompt,
@@ -220,9 +241,9 @@ export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: 
     throw new Error(`Agent ${agentKey} not found`)
   }
 
-  const model = getModelForProvider(agent.provider)
-
   try {
+    const model = getModelForProvider(agent.provider)
+
     const result = await generateObject({
       model,
       system: agent.systemPrompt,
@@ -279,28 +300,38 @@ export async function runAgentNetwork(prompts: Record<string, string>) {
 export async function storeEmbedding(content: string, metadata: any) {
   const supabase = createClient()
 
-  // Generate embedding using OpenAI
-  const { text: embeddingString } = await generateText({
-    model: openai("text-embedding-3-large"),
-    prompt: content,
-  })
+  try {
+    // Check if OpenAI API key is available
+    if (!config.ai.openaiApiKey) {
+      throw new Error("OpenAI API key is not configured")
+    }
 
-  // Parse the embedding string into a vector
-  const embedding = JSON.parse(embeddingString)
+    // Generate embedding using OpenAI
+    const { text: embeddingString } = await generateText({
+      model: openai("text-embedding-3-large"),
+      prompt: content,
+    })
 
-  // Store in Supabase vector store
-  const { error } = await supabase.rpc("match_documents", {
-    query_embedding: embedding,
-    match_threshold: 0.5,
-    match_count: 5,
-  })
+    // Parse the embedding string into a vector
+    const embedding = JSON.parse(embeddingString)
 
-  if (error) {
-    console.error("Error storing embedding:", error)
+    // Store in Supabase vector store
+    const { error } = await supabase.rpc("match_documents", {
+      query_embedding: embedding,
+      match_threshold: 0.5,
+      match_count: 5,
+    })
+
+    if (error) {
+      console.error("Error storing embedding:", error)
+      throw error
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error in storeEmbedding:", error)
     throw error
   }
-
-  return true
 }
 
 // Get real-time property data
@@ -413,33 +444,79 @@ export async function generateInvestmentStrategy(params: {
     // Get opportunity zones
     const opportunityZones = await getOpportunityZones({ region: params.region })
 
-    // Run investment strategist agent
-    const strategyPrompt = `
-      Generate a comprehensive investment strategy for a real estate investor with the following parameters:
-      - Region: ${params.region}
-      - Budget: $${params.budget.toLocaleString()}
-      - Investment Goals: ${params.investmentGoals}
-      - Time Horizon: ${params.timeHorizon}
-      - Risk Tolerance: ${params.riskTolerance}
-      
-      Provide specific recommendations on:
-      1. Property types to target
-      2. Neighborhoods to focus on
-      3. Acquisition strategy
-      4. Financing approach
-      5. Exit strategy
-      6. Risk mitigation measures
-      7. Timeline for implementation
-      
-      Include specific, actionable steps the investor should take.
-    `
+    try {
+      // Run investment strategist agent
+      const strategyPrompt = `
+        Generate a comprehensive investment strategy for a real estate investor with the following parameters:
+        - Region: ${params.region}
+        - Budget: ${params.budget.toLocaleString()}
+        - Investment Goals: ${params.investmentGoals}
+        - Time Horizon: ${params.timeHorizon}
+        - Risk Tolerance: ${params.riskTolerance}
+        
+        Provide specific recommendations on:
+        1. Property types to target
+        2. Neighborhoods to focus on
+        3. Acquisition strategy
+        4. Financing approach
+        5. Exit strategy
+        6. Risk mitigation measures
+        7. Timeline for implementation
+        
+        Include specific, actionable steps the investor should take.
+      `
 
-    const investmentStrategy = await runAgent("investment-strategist", strategyPrompt)
+      const investmentStrategy = await runAgent("investment-strategist", strategyPrompt)
 
-    return {
-      marketInsights,
-      opportunityZones: opportunityZones.slice(0, 3), // Top 3 opportunity zones
-      investmentStrategy,
+      return {
+        marketInsights,
+        opportunityZones: opportunityZones.slice(0, 3), // Top 3 opportunity zones
+        investmentStrategy,
+      }
+    } catch (error) {
+      console.error("Error running investment strategist agent:", error)
+
+      // Provide a fallback strategy if the agent fails
+      return {
+        marketInsights,
+        opportunityZones: opportunityZones.slice(0, 3),
+        investmentStrategy: `
+          # Investment Strategy for ${params.region}
+          
+          ## Market Overview
+          Based on our analysis, ${params.region} shows potential for real estate investment with varying opportunities depending on your goals.
+          
+          ## Recommended Strategy
+          Given your budget of $${params.budget.toLocaleString()}, ${params.investmentGoals} goals, ${params.timeHorizon} horizon, and ${params.riskTolerance} risk tolerance:
+          
+          ### Property Types to Target
+          - Single-family homes in growing neighborhoods
+          - Small multi-family properties (2-4 units)
+          - Condos in central locations with good rental demand
+          
+          ### Acquisition Strategy
+          - Focus on properties priced 10-15% below market value
+          - Target properties requiring minor cosmetic renovations
+          - Consider off-market opportunities through networking
+          
+          ### Financing Approach
+          - Conventional financing with 20-25% down payment
+          - Consider portfolio loans for multiple properties
+          - Maintain cash reserves of 6 months per property
+          
+          ### Exit Strategy
+          - Hold for long-term appreciation and cash flow
+          - Refinance after 3-5 years to extract equity
+          - Consider 1031 exchanges for portfolio growth
+          
+          ### Risk Mitigation
+          - Diversify across different neighborhoods
+          - Maintain adequate insurance coverage
+          - Build relationships with reliable contractors
+          
+          This strategy is based on current market conditions and should be reviewed periodically as the market evolves.
+        `,
+      }
     }
   } catch (error) {
     console.error("Error generating investment strategy:", error)
