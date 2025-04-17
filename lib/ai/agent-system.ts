@@ -1,7 +1,3 @@
-import { generateText, generateObject } from "ai"
-import { openai } from "@ai-sdk/openai"
-import { anthropic } from "@ai-sdk/anthropic"
-import { mistral } from "@ai-sdk/mistral"
 import { createClient } from "@/utils/supabase/server"
 import { config } from "@/lib/config"
 import { investmentCalculatorTool, propertyDatabaseTool, realEstateSearchTool, cmaToolTool } from "./tools"
@@ -14,6 +10,7 @@ import {
   getMarketInsights,
   getOpportunityZones,
 } from "@/lib/api/real-estate"
+import { mockGenerateText, mockGenerateObject } from "./mock-implementation"
 
 // Define agent types
 export type AgentType =
@@ -154,31 +151,38 @@ const agentRegistry: Record<string, AgentConfig> = {
   },
 }
 
-// Get the appropriate model based on provider
-function getModelForProvider(provider: AgentProvider) {
+// Get the appropriate model based on provider - this is now a runtime-only function
+async function getModelForProvider(provider: AgentProvider) {
   try {
+    // Dynamically import AI SDK modules only at runtime
+    const { generateText, generateObject } = await import("ai")
+
     switch (provider) {
       case "openai":
         // Check if OpenAI API key is available
         if (!config.ai.openaiApiKey) {
           throw new Error("OpenAI API key is not configured")
         }
+        const { openai } = await import("@ai-sdk/openai")
         return openai("gpt-4o")
       case "anthropic":
         // Check if Anthropic API key is available
         if (!config.ai.anthropicApiKey) {
           throw new Error("Anthropic API key is not configured")
         }
+        const { anthropic } = await import("@ai-sdk/anthropic")
         return anthropic("claude-3-opus-20240229")
       case "mistral":
         // Check if Mistral API key is available
         if (!process.env.MISTRAL_API_KEY) {
           throw new Error("Mistral API key is not configured")
         }
+        const { mistral } = await import("@ai-sdk/mistral")
         return mistral("mistral-large-latest")
       default:
         // Default to OpenAI if available
         if (config.ai.openaiApiKey) {
+          const { openai } = await import("@ai-sdk/openai")
           return openai("gpt-4o")
         }
         throw new Error("No AI provider API keys are configured")
@@ -197,7 +201,17 @@ export async function runAgent(agentKey: string, prompt: string) {
   }
 
   try {
-    const model = getModelForProvider(agent.provider)
+    // Dynamically import the generateText function
+    let generateText
+    try {
+      const aiModule = await import("ai")
+      generateText = aiModule.generateText
+    } catch (error) {
+      console.warn("Failed to import AI SDK, using mock implementation:", error)
+      generateText = mockGenerateText
+    }
+
+    const model = await getModelForProvider(agent.provider)
 
     const { text } = await generateText({
       model,
@@ -230,7 +244,30 @@ export async function runAgent(agentKey: string, prompt: string) {
       error_message: String(error),
     })
 
-    throw error
+    // Return a fallback response
+    return `
+      # AI Analysis Currently Unavailable
+      
+      We're sorry, but the AI analysis is currently unavailable. This could be due to:
+      
+      - Missing API keys
+      - Service disruption
+      - Configuration issues
+      
+      Please try again later or contact support if the issue persists.
+      
+      In the meantime, here are some general insights about real estate investment:
+      
+      ## General Investment Principles
+      
+      1. Location is crucial - look for areas with strong economic indicators
+      2. Cash flow is king for rental properties
+      3. Consider long-term appreciation potential
+      4. Diversify your portfolio across different property types and locations
+      5. Always maintain adequate reserves for unexpected expenses
+      
+      These general principles apply to most real estate investments, but for personalized advice, please try again when the AI service is available.
+    `
   }
 }
 
@@ -242,7 +279,17 @@ export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: 
   }
 
   try {
-    const model = getModelForProvider(agent.provider)
+    // Dynamically import the generateObject function
+    let generateObject
+    try {
+      const aiModule = await import("ai")
+      generateObject = aiModule.generateObject
+    } catch (error) {
+      console.warn("Failed to import AI SDK, using mock implementation:", error)
+      generateObject = mockGenerateObject
+    }
+
+    const model = await getModelForProvider(agent.provider)
 
     const result = await generateObject({
       model,
@@ -276,7 +323,11 @@ export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: 
       error_message: String(error),
     })
 
-    throw error
+    // Return a fallback response
+    return {
+      error: "AI service unavailable",
+      message: "The AI service is currently unavailable. Please try again later.",
+    } as any
   }
 }
 
@@ -305,6 +356,10 @@ export async function storeEmbedding(content: string, metadata: any) {
     if (!config.ai.openaiApiKey) {
       throw new Error("OpenAI API key is not configured")
     }
+
+    // Dynamically import the generateText function
+    const { generateText } = await import("ai")
+    const { openai } = await import("@ai-sdk/openai")
 
     // Generate embedding using OpenAI
     const { text: embeddingString } = await generateText({
@@ -413,10 +468,16 @@ export async function getInvestmentOpportunities(region: string, regionType?: st
     const marketInsights = await getMarketInsights({ region, regionType })
 
     // Run opportunity finder agent
-    const opportunityAnalysis = await runAgent(
-      "opportunity-finder",
-      `Analyze investment opportunities in ${region}. Identify the best neighborhoods, property types, and investment strategies based on current market conditions.`,
-    )
+    let opportunityAnalysis
+    try {
+      opportunityAnalysis = await runAgent(
+        "opportunity-finder",
+        `Analyze investment opportunities in ${region}. Identify the best neighborhoods, property types, and investment strategies based on current market conditions.`,
+      )
+    } catch (error) {
+      console.error("Error running opportunity finder agent:", error)
+      opportunityAnalysis = "AI analysis currently unavailable. Please try again later."
+    }
 
     return {
       opportunityZones,
@@ -444,6 +505,7 @@ export async function generateInvestmentStrategy(params: {
     // Get opportunity zones
     const opportunityZones = await getOpportunityZones({ region: params.region })
 
+    let investmentStrategy
     try {
       // Run investment strategist agent
       const strategyPrompt = `
@@ -466,57 +528,53 @@ export async function generateInvestmentStrategy(params: {
         Include specific, actionable steps the investor should take.
       `
 
-      const investmentStrategy = await runAgent("investment-strategist", strategyPrompt)
-
-      return {
-        marketInsights,
-        opportunityZones: opportunityZones.slice(0, 3), // Top 3 opportunity zones
-        investmentStrategy,
-      }
+      investmentStrategy = await runAgent("investment-strategist", strategyPrompt)
     } catch (error) {
       console.error("Error running investment strategist agent:", error)
 
       // Provide a fallback strategy if the agent fails
-      return {
-        marketInsights,
-        opportunityZones: opportunityZones.slice(0, 3),
-        investmentStrategy: `
-          # Investment Strategy for ${params.region}
-          
-          ## Market Overview
-          Based on our analysis, ${params.region} shows potential for real estate investment with varying opportunities depending on your goals.
-          
-          ## Recommended Strategy
-          Given your budget of $${params.budget.toLocaleString()}, ${params.investmentGoals} goals, ${params.timeHorizon} horizon, and ${params.riskTolerance} risk tolerance:
-          
-          ### Property Types to Target
-          - Single-family homes in growing neighborhoods
-          - Small multi-family properties (2-4 units)
-          - Condos in central locations with good rental demand
-          
-          ### Acquisition Strategy
-          - Focus on properties priced 10-15% below market value
-          - Target properties requiring minor cosmetic renovations
-          - Consider off-market opportunities through networking
-          
-          ### Financing Approach
-          - Conventional financing with 20-25% down payment
-          - Consider portfolio loans for multiple properties
-          - Maintain cash reserves of 6 months per property
-          
-          ### Exit Strategy
-          - Hold for long-term appreciation and cash flow
-          - Refinance after 3-5 years to extract equity
-          - Consider 1031 exchanges for portfolio growth
-          
-          ### Risk Mitigation
-          - Diversify across different neighborhoods
-          - Maintain adequate insurance coverage
-          - Build relationships with reliable contractors
-          
-          This strategy is based on current market conditions and should be reviewed periodically as the market evolves.
-        `,
-      }
+      investmentStrategy = `
+        # Investment Strategy for ${params.region}
+        
+        ## Market Overview
+        Based on our analysis, ${params.region} shows potential for real estate investment with varying opportunities depending on your goals.
+        
+        ## Recommended Strategy
+        Given your budget of ${params.budget.toLocaleString()}, ${params.investmentGoals} goals, ${params.timeHorizon} horizon, and ${params.riskTolerance} risk tolerance:
+        
+        ### Property Types to Target
+        - Single-family homes in growing neighborhoods
+        - Small multi-family properties (2-4 units)
+        - Condos in central locations with good rental demand
+        
+        ### Acquisition Strategy
+        - Focus on properties priced 10-15% below market value
+        - Target properties requiring minor cosmetic renovations
+        - Consider off-market opportunities through networking
+        
+        ### Financing Approach
+        - Conventional financing with 20-25% down payment
+        - Consider portfolio loans for multiple properties
+        - Maintain cash reserves of 6 months per property
+        
+        ### Exit Strategy
+        - Hold for long-term appreciation and cash flow
+        - Refinance after 3-5 years to extract equity
+        - Consider 1031 exchanges for portfolio growth
+        
+        ### Risk Mitigation
+        - Diversify across different neighborhoods
+        - Maintain adequate insurance coverage
+        - Build relationships with reliable contractors
+        
+        This strategy is based on current market conditions and should be reviewed periodically as the market evolves.
+      `
+    }
+
+    return {
+      marketInsights,
+      opportunityZones: opportunityZones.slice(0, 3), // Top 3 opportunity zones
+      investmentStrategy,
     }
   } catch (error) {
     console.error("Error generating investment strategy:", error)

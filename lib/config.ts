@@ -2,7 +2,7 @@
 export const config = {
   // Supabase configuration
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
     // Remove direct reference to the anon key
   },
 
@@ -23,10 +23,21 @@ export const config = {
     isProduction: process.env.NODE_ENV === "production",
   },
 
-  // AI configuration
+  // AI configuration - these are now functions to prevent access during build
   ai: {
-    openaiApiKey: process.env.OPENAI_API_KEY || "",
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
-    mistralApiKey: process.env.MISTRAL_API_KEY || "",
+    // Use getters to ensure these are only accessed at runtime
+    get openaiApiKey() {
+      return process.env.OPENAI_API_KEY || ""
+    },
+    get anthropicApiKey() {
+      return process.env.ANTHROPIC_API_KEY || ""
+    },
+    get mistralApiKey() {
+      return process.env.MISTRAL_API_KEY || ""
+    },
+    // Helper function to check if any AI providers are configured
+    get hasAnyAiProvider() {
+      return !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.MISTRAL_API_KEY)
+    },
   },
 }
