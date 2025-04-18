@@ -1,4 +1,4 @@
-// Environment configuration
+// Environment configuration with safe access to environment variables
 export const config = {
   // Supabase configuration
   supabase: {
@@ -23,20 +23,23 @@ export const config = {
     isProduction: process.env.NODE_ENV === "production",
   },
 
-  // AI configuration - these are now functions to prevent access during build
+  // AI configuration - using a safer approach
   ai: {
-    // Use getters to ensure these are only accessed at runtime
+    // Safe getter for OpenAI API key
     get openaiApiKey() {
-      return process.env.OPENAI_API_KEY || ""
+      return typeof process !== "undefined" && process.env ? process.env.OPENAI_API_KEY || "" : ""
     },
+    // Safe getter for Anthropic API key
     get anthropicApiKey() {
-      return process.env.ANTHROPIC_API_KEY || ""
+      return typeof process !== "undefined" && process.env ? process.env.ANTHROPIC_API_KEY || "" : ""
     },
+    // Safe getter for Mistral API key
     get mistralApiKey() {
-      return process.env.MISTRAL_API_KEY || ""
+      return typeof process !== "undefined" && process.env ? process.env.MISTRAL_API_KEY || "" : ""
     },
     // Helper function to check if any AI providers are configured
     get hasAnyAiProvider() {
+      if (typeof process === "undefined" || !process.env) return false
       return !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.MISTRAL_API_KEY)
     },
   },
