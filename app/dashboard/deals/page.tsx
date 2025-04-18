@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
-import { runAgent } from "@/lib/ai/agent-system"
+import { DealAnalysis } from "@/components/deals/deal-analysis"
 
 export default async function DealsPage() {
   const supabase = createClient()
@@ -22,12 +22,6 @@ export default async function DealsPage() {
     .select("*")
     .order("deal_score", { ascending: false })
     .limit(dealLimit)
-
-  // Get AI analysis of top deals
-  const dealAnalysis = await runAgent(
-    "deal-finder",
-    "Analyze the current top real estate deals and explain why they represent good investment opportunities.",
-  )
 
   return (
     <div className="space-y-6">
@@ -142,14 +136,8 @@ export default async function DealsPage() {
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader>
-              <h2 className="text-2xl font-bold">AI Deal Analysis</h2>
-            </CardHeader>
-            <CardContent className="prose max-w-none">
-              <div dangerouslySetInnerHTML={{ __html: dealAnalysis }} />
-            </CardContent>
-          </Card>
+          {/* Replace direct AI call with client component */}
+          <DealAnalysis />
         </TabsContent>
 
         <TabsContent value="residential" className="space-y-4">
