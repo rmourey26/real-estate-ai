@@ -1,115 +1,99 @@
 // This file is only imported at runtime, never during build
+import { createClient } from "@/utils/supabase/server"
 import { config } from "@/lib/config"
-import { getMarketInsights, getOpportunityZones } from "@/lib/api/real-estate"
 
-// Generate investment strategy - runtime only function
-export async function generateInvestmentStrategy(params: {
-  region: string
-  budget: number
-  investmentGoals: string
-  timeHorizon: string
-  riskTolerance: string
-}) {
+// Run an agent with a specific prompt - runtime only function
+export async function runAgent(agentKey: string, prompt: string) {
   try {
-    // Get market insights
-    const marketInsights = await getMarketInsights({ region: params.region })
+    // Dynamically import AI modules only at runtime
+    const { generateText } = await import("ai")
 
-    // Get opportunity zones
-    const opportunityZones = await getOpportunityZones({ region: params.region })
+    // Select the appropriate model based on the agent key
+    let model
+    let systemPrompt = ""
 
-    let investmentStrategy
-    try {
-      // Dynamically import AI modules only at runtime
-      const { generateText } = await import("ai")
-      const { openai } = await import("@ai-sdk/openai")
-
-      // Check if OpenAI API key is available
-      if (!config.ai.openaiApiKey) {
-        throw new Error("OpenAI API key is not configured")
-      }
-
-      // Run investment strategist agent
-      const strategyPrompt = `
-        Generate a comprehensive investment strategy for a real estate investor with the following parameters:
-        - Region: ${params.region}
-        - Budget: ${params.budget.toLocaleString()}
-        - Investment Goals: ${params.investmentGoals}
-        - Time Horizon: ${params.timeHorizon}
-        - Risk Tolerance: ${params.riskTolerance}
-        
-        Provide specific recommendations on:
-        1. Property types to target
-        2. Neighborhoods to focus on
-        3. Acquisition strategy
-        4. Financing approach
-        5. Exit strategy
-        6. Risk mitigation measures
-        7. Timeline for implementation
-        
-        Include specific, actionable steps the investor should take.
-      `
-
-      const { text } = await generateText({
-        model: openai("gpt-4o"),
-        prompt: strategyPrompt,
-        system: `You are a real estate investment strategist AI. Your job is to develop comprehensive investment strategies based on market conditions and investor goals.
-        Analyze market data to identify optimal investment approaches for different regions and property types.
-        Consider factors like market cycle position, economic indicators, demographic trends, and regulatory environment.
-        Develop tailored strategies for different investor profiles (e.g., cash flow investors, appreciation investors, etc.).
-        Provide detailed implementation plans with specific action steps, timeline, and expected outcomes.
-        Always provide ACTIONABLE strategies with clear steps, potential risks, and mitigation approaches.`,
-      })
-
-      investmentStrategy = text
-    } catch (error) {
-      console.error("Error running investment strategist agent:", error)
-
-      // Provide a fallback strategy if the agent fails
-      investmentStrategy = `
-        # Investment Strategy for ${params.region}
-        
-        ## Market Overview
-        Based on our analysis, ${params.region} shows potential for real estate investment with varying opportunities depending on your goals.
-        
-        ## Recommended Strategy
-        Given your budget of $${params.budget.toLocaleString()}, ${params.investmentGoals} goals, ${params.timeHorizon} horizon, and ${params.riskTolerance} risk tolerance:
-        
-        ### Property Types to Target
-        - Single-family homes in growing neighborhoods
-        - Small multi-family properties (2-4 units)
-        - Condos in central locations with good rental demand
-        
-        ### Acquisition Strategy
-        - Focus on properties priced 10-15% below market value
-        - Target properties requiring minor cosmetic renovations
-        - Consider off-market opportunities through networking
-        
-        ### Financing Approach
-        - Conventional financing with 20-25% down payment
-        - Consider portfolio loans for multiple properties
-        - Maintain cash reserves of 6 months per property
-        
-        ### Exit Strategy
-        - Hold for long-term appreciation and cash flow
-        - Refinance after 3-5 years to extract equity
-        - Consider 1031 exchanges for portfolio growth
-        
-        ### Risk Mitigation
-        - Diversify across different neighborhoods
-        - Maintain adequate insurance coverage
-        - Build relationships with reliable contractors
-        
-        This strategy is based on current market conditions and should be reviewed periodically as the market evolves.
-      `
+    switch (agentKey) {
+      case "deal-finder":
+        if (!config.ai.anthropicApiKey) {
+          throw new Error("Anthropic API key is not configured")
+        }
+        const { anthropic } = await import("@ai-sdk/anthropic")
+        model = anthropic("claude-3-opus-20240229")
+        systemPrompt = `You are a real estate deal finder AI. Your job is to identify exceptional real estate deals.
+          Analyze property listings to find properties that are significantly undervalued compared to market rates.
+          Consider factors like price per square foot, comparable properties, neighborhood trends, and property condition.
+          For each potential deal, calculate a "deal score" representing the percentage below market value.
+          Provide a brief explanation of why each property represents a good deal.
+          Always provide ACTIONABLE recommendations that investors can use immediately.`
+        break
+      case "investment-advisor":
+        if (!config.ai.openaiApiKey) {
+          throw new Error("OpenAI API key is not configured")
+        }
+        const { openai } = await import("@ai-sdk/openai")
+        model = openai("gpt-4o")
+        systemPrompt = `You are a real estate investment advisor AI. Your job is to analyze properties and provide investment recommendations.
+          Calculate key investment metrics like ROI, cap rate, cash flow, and appreciation potential.
+          Consider factors like location, property condition, market trends, and financing options.
+          Provide clear, actionable advice on whether a property is a good investment and why.
+          Format your analysis in a structured way with clear sections for different aspects of the investment.
+          Always provide ACTIONABLE recommendations with specific steps investors should take.`
+        break
+      case "neighborhood-analyst":
+        if (!config.ai.anthropicApiKey) {
+          throw new Error("Anthropic API key is not configured")
+        }
+        const { anthropic: anthropicNeighborhood } = await import("@ai-sdk/anthropic")
+        model = anthropicNeighborhood("claude-3-opus-20240229")
+        systemPrompt = `You are a neighborhood analysis AI. Your job is to provide detailed insights about neighborhoods.
+          Analyze factors like schools, crime rates, amenities, transportation, and future development plans.
+          Consider how these factors affect property values and quality of life.
+          Provide a comprehensive overview of the neighborhood's strengths and weaknesses.
+          Format your analysis in a structured way with clear sections for different aspects of the neighborhood.
+          Always provide ACTIONABLE insights that can help investors or homebuyers make decisions.`
+        break
+      default:
+        throw new Error(`Agent ${agentKey} not found`)
     }
 
-    return {
-      marketInsights,
-      opportunityZones: opportunityZones.slice(0, 3), // Top 3 opportunity zones
-      investmentStrategy,
+    if (!model) {
+      throw new Error("Failed to initialize AI model")
     }
+
+    const { text } = await generateText({
+      model,
+      system: systemPrompt,
+      prompt,
+    })
+
+    // Log the agent run
+    const supabase = createClient()
+    await supabase.from("ai_agent_logs").insert({
+      agent_name: agentKey,
+      action_type: "generate",
+      details: { prompt, response: text.substring(0, 500) + "..." },
+      success: true,
+    })
+
+    return text
   } catch (error) {
-    console.error("Error generating investment strategy:", error)
-    throw error
+    console.error(`Error running agent ${agentKey}:`, error)
+
+    // Log the error
+    try {
+      const supabase = createClient()
+      await supabase.from("ai_agent_logs").insert({
+        agent_name: agentKey,
+        action_type: "generate",
+        details: { prompt, error: String(error) },
+        success: false,
+        error_message: String(error),
+      })
+    } catch (logError) {
+      console.error("Error logging agent failure:", logError)
+    }
+
+    // Return null to indicate failure - the caller should handle this
+    return null
   }
 }
