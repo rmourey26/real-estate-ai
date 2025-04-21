@@ -1,8 +1,8 @@
-// Environment configuration with safe access to environment variables
+// Environment configuration
 export const config = {
   // Supabase configuration
   supabase: {
-    url: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    url: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     // Remove direct reference to the anon key
   },
 
@@ -23,24 +23,9 @@ export const config = {
     isProduction: process.env.NODE_ENV === "production",
   },
 
-  // AI configuration - using a safer approach
+  // AI configuration
   ai: {
-    // Safe getter for OpenAI API key
-    get openaiApiKey() {
-      return typeof process !== "undefined" && process.env ? process.env.OPENAI_API_KEY || "" : ""
-    },
-    // Safe getter for Anthropic API key
-    get anthropicApiKey() {
-      return typeof process !== "undefined" && process.env ? process.env.ANTHROPIC_API_KEY || "" : ""
-    },
-    // Safe getter for Mistral API key
-    get mistralApiKey() {
-      return typeof process !== "undefined" && process.env ? process.env.MISTRAL_API_KEY || "" : ""
-    },
-    // Helper function to check if any AI providers are configured
-    get hasAnyAiProvider() {
-      if (typeof process === "undefined" || !process.env) return false
-      return !!(process.env.OPENAI_API_KEY || process.env.ANTHROPIC_API_KEY || process.env.MISTRAL_API_KEY)
-    },
+    openaiApiKey: process.env.OPENAI_API_KEY || "",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
   },
 }

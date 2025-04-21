@@ -3,13 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { notFound } from "next/navigation"
+import { runAgent } from "@/lib/ai/agent-system"
 import { SavePropertyButton } from "@/components/property/save-property-button"
 import { InvestmentCalculator } from "@/components/property/investment-calculator"
 import { NeighborhoodAnalysis } from "@/components/property/neighborhood-analysis"
 import { ValuationHistory } from "@/components/property/valuation-history"
 import { CMAAnalysis } from "@/components/property/cma-analysis"
 import { InvestmentAnalysisCard } from "@/components/property/investment-analysis-card"
-import { PropertyAIAnalysis } from "@/components/property/property-ai-analysis"
 
 export default async function PropertyPage({ params }: { params: { id: string } }) {
   const supabase = createClient()
@@ -31,6 +31,43 @@ export default async function PropertyPage({ params }: { params: { id: string } 
     .eq("user_id", user?.id)
     .eq("listing_id", property.id)
     .single()
+
+  // Get AI analysis of the property
+  const propertyAnalysis = await runAgent(
+    "deal-finder",
+    `Analyze this property in detail:
+    Address: ${property.address}, ${property.city}, ${property.state} ${property.zip_code}
+    Price: ${property.price}
+    Details: ${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, ${property.square_feet} sqft
+    Year Built: ${property.year_built}
+    Property Type: ${property.property_type}
+    
+    Provide a detailed analysis of why this is a good deal, potential ROI, and any risks to consider.`,
+  )
+
+  // Get investment analysis
+  const investmentAnalysis = await runAgent(
+    "investment-advisor",
+    `Provide investment analysis for this property:
+    Address: ${property.address}, ${property.city}, ${property.state} ${property.zip_code}
+    Price: ${property.price}
+    Details: ${property.bedrooms} bedrooms, ${property.bathrooms} bathrooms, ${property.square_feet} sqft
+    Year Built: ${property.year_built}
+    Property Type: ${property.property_type}
+    
+    Calculate potential ROI, cash flow, and appreciation. Consider both short-term rental and long-term rental scenarios.`,
+  )
+
+  // Get neighborhood analysis
+  const neighborhoodAnalysis = await runAgent(
+    "neighborhood-analyst",
+    `Analyze the neighborhood for this property:
+    City: ${property.city}
+    State: ${property.state}
+    Zip Code: ${property.zip_code}
+    
+    Provide insights on schools, crime rates, amenities, and future growth potential.`,
+  )
 
   return (
     <div className="space-y-6">
@@ -261,7 +298,15 @@ export default async function PropertyPage({ params }: { params: { id: string } 
             </TabsContent>
 
             <TabsContent value="analysis" className="space-y-4">
-              <PropertyAIAnalysis property={property} analysisType="property" />
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Property Analysis</CardTitle>
+                  <CardDescription>In-depth analysis of this property's investment potential</CardDescription>
+                </CardHeader>
+                <CardContent className="prose max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: propertyAnalysis }} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="investment" className="space-y-4">
@@ -273,13 +318,29 @@ export default async function PropertyPage({ params }: { params: { id: string } 
                 location={`${property.city}, ${property.state}`}
               />
 
-              <PropertyAIAnalysis property={property} analysisType="investment" />
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Investment Analysis</CardTitle>
+                  <CardDescription>Expert insights on this property as an investment</CardDescription>
+                </CardHeader>
+                <CardContent className="prose max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: investmentAnalysis }} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="neighborhood" className="space-y-4">
               <NeighborhoodAnalysis city={property.city} state={property.state} zipCode={property.zip_code} />
 
-              <PropertyAIAnalysis property={property} analysisType="neighborhood" />
+              <Card>
+                <CardHeader>
+                  <CardTitle>AI Neighborhood Analysis</CardTitle>
+                  <CardDescription>Insights about the neighborhood and surrounding area</CardDescription>
+                </CardHeader>
+                <CardContent className="prose max-w-none">
+                  <div dangerouslySetInnerHTML={{ __html: neighborhoodAnalysis }} />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="cma" className="space-y-4">

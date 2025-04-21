@@ -1,20 +1,32 @@
 import { type NextRequest, NextResponse } from "next/server"
+import { getMarketInsights } from "@/lib/api/real-estate"
+import { z } from "zod"
+
+// Define the request schema
+const RequestSchema = z.object({
+  region: z.string().min(1, { message: "Region is required" }),
+  regionType: z.string().optional(),
+})
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const region = searchParams.get("region")
-    const regionType = searchParams.get("regionType")
+    const regionType = searchParams.get("regionType") || undefined
 
-    if (!region) {
-      return NextResponse.json({ error: "Region parameter is required" }, { status: 400 })
+    // Validate the request parameters
+    const result = RequestSchema.safeParse({ region, regionType })
+
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid request parameters", details: result.error.format() }, { status: 400 })
     }
 
-    // Dynamically import the getMarketInsights function
-    const { getMarketInsights } = await import("@/lib/api/real-estate")
+    const insights = await getMarketInsights({
+      region: region!,
+      regionType: regionType as any,
+    })
 
-    const insights = await getMarketInsights({ region, regionType: regionType || undefined })
-    return NextResponse.json({ insights })
+    return NextResponse.json(insights)
   } catch (error) {
     console.error("Error in market insights API route:", error)
     return NextResponse.json({ error: "Failed to fetch market insights" }, { status: 500 })

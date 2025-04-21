@@ -1,131 +1,40 @@
 import { createClient } from "@/utils/supabase/server"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { runAgent, runAgentWithStructuredOutput } from "@/lib/ai/agent-system"
 import { MarketInsightsCard } from "@/components/analytics/market-insights-card"
 import { OpportunityZonesCard } from "@/components/analytics/opportunity-zones-card"
 import { InvestmentStrategyGenerator } from "@/components/analytics/investment-strategy-generator"
+import { z } from "zod"
 
-// Static market analysis to use as fallback
-const staticMarketAnalysis = `
-<h2>Current US Real Estate Market Overview</h2>
-<p>The US real estate market continues to show regional variations with some markets experiencing moderate growth while others face challenges with affordability and inventory constraints.</p>
-
-<h3>Key Observations:</h3>
-<ul>
-  <li>Mortgage rates have stabilized but remain higher than historical averages</li>
-  <li>Housing inventory has improved slightly but remains below pre-pandemic levels</li>
-  <li>Price appreciation has moderated in most markets</li>
-  <li>Regional markets show significant variation in performance</li>
-  <li>Rental markets remain strong in most metropolitan areas</li>
-</ul>
-
-<p>Investors should focus on markets with strong economic fundamentals, population growth, and diversified employment sectors.</p>
-`
-
-// Static trend prediction to use as fallback
-const staticTrendPrediction = `
-<h2>Real Estate Market Forecast</h2>
-
-<h3>Short-Term Outlook (3 months)</h3>
-<p>The market is expected to maintain current conditions with modest price growth in most regions. Seasonal patterns will likely influence activity levels with some slowdown during winter months.</p>
-
-<h3>Medium-Term Outlook (6 months)</h3>
-<p>Mortgage rates may see modest adjustments based on Federal Reserve policies. Housing inventory is expected to gradually improve, providing more options for buyers and potentially moderating price growth.</p>
-
-<h3>Long-Term Outlook (12 months)</h3>
-<p>The market is projected to continue its normalization process with more balanced conditions between buyers and sellers. Regional variations will persist, with stronger growth in areas with positive migration patterns and job creation.</p>
-
-<h3>Investment Implications</h3>
-<p>Investors should consider:</p>
-<ul>
-  <li>Cash flow opportunities in stable markets</li>
-  <li>Value-add strategies in emerging neighborhoods</li>
-  <li>Long-term appreciation potential in high-growth metros</li>
-  <li>Portfolio diversification across different property types and locations</li>
-</ul>
-`
-
-// Static structured market analysis to use as fallback
-const staticStructuredAnalysis = {
-  summary:
-    "The US real estate market shows regional variations with moderating price growth and improving inventory levels.",
-  keyTrends: [
-    {
-      trend: "Mortgage Rate Stabilization",
-      impact: "Higher but stable mortgage rates are creating a more predictable environment for buyers and investors.",
-      confidence: 85,
-    },
-    {
-      trend: "Inventory Improvement",
-      impact: "Gradually increasing inventory is providing more options for buyers and reducing competitive pressure.",
-      confidence: 75,
-    },
-    {
-      trend: "Regional Divergence",
-      impact:
-        "Market performance varies significantly by region, with stronger growth in the South and parts of the Midwest.",
-      confidence: 90,
-    },
-    {
-      trend: "Rental Demand Strength",
-      impact:
-        "Strong rental demand continues to support investment properties, particularly in urban and near-urban areas.",
-      confidence: 80,
-    },
-  ],
-  hotMarkets: [
-    {
-      location: "Austin, TX",
-      priceChange: "+5.2% YoY",
-      inventory: "Improving",
-      outlook: "Strong growth potential with tech sector expansion",
-    },
-    {
-      location: "Raleigh, NC",
-      priceChange: "+6.8% YoY",
-      inventory: "Moderate",
-      outlook: "Positive outlook with strong job market",
-    },
-    {
-      location: "Nashville, TN",
-      priceChange: "+4.7% YoY",
-      inventory: "Limited but improving",
-      outlook: "Continued growth expected with diverse economy",
-    },
-    {
-      location: "Tampa, FL",
-      priceChange: "+3.9% YoY",
-      inventory: "Increasing",
-      outlook: "Steady growth with migration trends",
-    },
-  ],
-  investmentRecommendations: [
-    {
-      strategy: "Cash Flow Focus",
-      propertyType: "Multi-family (2-4 units)",
-      locations: ["Midwest cities", "Secondary Southern markets", "Suburban areas near job centers"],
-      expectedReturn: "8-12% annual ROI",
-      riskLevel: "Medium",
-    },
-    {
-      strategy: "Appreciation Play",
-      propertyType: "Single-family homes",
-      locations: ["Growing tech hubs", "Areas with infrastructure development", "University towns"],
-      expectedReturn: "5-7% annual appreciation",
-      riskLevel: "Medium",
-    },
-    {
-      strategy: "Value-Add Opportunities",
-      propertyType: "Underperforming properties",
-      locations: ["Emerging neighborhoods", "Revitalization zones", "Areas with rezoning potential"],
-      expectedReturn: "15-20% ROI after improvements",
-      riskLevel: "High",
-    },
-  ],
-}
-
-// Top markets from static analysis
-const staticTopMarkets = ["Austin, TX", "Raleigh, NC", "Nashville, TN"]
+// Schema for structured market analysis
+const marketAnalysisSchema = z.object({
+  summary: z.string(),
+  keyTrends: z.array(
+    z.object({
+      trend: z.string(),
+      impact: z.string(),
+      confidence: z.number().min(0).max(100),
+    }),
+  ),
+  hotMarkets: z.array(
+    z.object({
+      location: z.string(),
+      priceChange: z.string(),
+      inventory: z.string(),
+      outlook: z.string(),
+    }),
+  ),
+  investmentRecommendations: z.array(
+    z.object({
+      strategy: z.string(),
+      propertyType: z.string(),
+      locations: z.array(z.string()),
+      expectedReturn: z.string(),
+      riskLevel: z.enum(["Low", "Medium", "High"]),
+    }),
+  ),
+})
 
 export default async function AnalyticsPage() {
   const supabase = createClient()
@@ -140,11 +49,27 @@ export default async function AnalyticsPage() {
     .order("created_at", { ascending: false })
     .limit(10)
 
-  // Use static data instead of AI-generated content during build
-  const marketAnalysis = staticMarketAnalysis
-  const trendPrediction = staticTrendPrediction
-  const structuredAnalysis = staticStructuredAnalysis
-  const topMarkets = staticTopMarkets
+  // Get AI analysis of current market conditions
+  const marketAnalysis = await runAgent(
+    "market-analyzer",
+    "Provide a comprehensive analysis of the current US real estate market conditions, focusing on trends in the last 30 days.",
+  )
+
+  // Get AI prediction of future trends
+  const trendPrediction = await runAgent(
+    "trend-predictor",
+    "Predict the likely trends in the US real estate market over the next 3, 6, and 12 months.",
+  )
+
+  // Get structured market analysis
+  const structuredAnalysis = await runAgentWithStructuredOutput(
+    "market-analyzer",
+    "Analyze the current US real estate market and provide structured insights on trends, hot markets, and investment recommendations.",
+    marketAnalysisSchema,
+  )
+
+  // Get top markets for analysis
+  const topMarkets = structuredAnalysis.hotMarkets.map((market) => market.location).slice(0, 3)
 
   return (
     <div className="space-y-6">
