@@ -1,16 +1,12 @@
 "use client"
 
 import { useState } from "react"
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { InvestmentCalculatorSchema, type InvestmentCalculatorValues } from "@/lib/schemas/investment"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Slider } from "@/components/ui/slider"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 
 interface InvestmentCalculatorProps {
   propertyPrice: number
@@ -27,33 +23,23 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
   const defaultMonthlyExpenses = Math.round(propertyPrice * 0.002) // 0.2% of property price
   const defaultAppreciationRate = 3 // 3% annual appreciation
 
+  // State for calculator inputs
+  const [downPayment, setDownPayment] = useState(defaultDownPayment)
+  const [downPaymentPercent, setDownPaymentPercent] = useState(20)
+  const [interestRate, setInterestRate] = useState(defaultInterestRate)
+  const [loanTerm, setLoanTerm] = useState(defaultLoanTerm)
+  const [monthlyRent, setMonthlyRent] = useState(defaultMonthlyRent)
+  const [monthlyExpenses, setMonthlyExpenses] = useState(defaultMonthlyExpenses)
+  const [appreciationRate, setAppreciationRate] = useState(defaultAppreciationRate)
   const [calculationResults, setCalculationResults] = useState<any>(null)
 
-  const form = useForm<InvestmentCalculatorValues>({
-    resolver: zodResolver(InvestmentCalculatorSchema),
-    defaultValues: {
-      propertyPrice: propertyPrice,
-      downPayment: defaultDownPayment,
-      interestRate: defaultInterestRate,
-      loanTerm: defaultLoanTerm,
-      monthlyRent: defaultMonthlyRent,
-      monthlyExpenses: defaultMonthlyExpenses,
-      appreciationRate: defaultAppreciationRate,
-    },
-  })
-
-  const watchDownPayment = form.watch("downPayment")
-  const watchInterestRate = form.watch("interestRate")
-  const watchAppreciationRate = form.watch("appreciationRate")
-  const [downPaymentPercent, setDownPaymentPercent] = useState(20)
-
   // Calculate loan amount
-  const loanAmount = propertyPrice - watchDownPayment
+  const loanAmount = propertyPrice - downPayment
 
   // Calculate monthly mortgage payment
   const calculateMortgage = () => {
-    const monthlyInterestRate = watchInterestRate / 100 / 12
-    const numberOfPayments = form.getValues("loanTerm") * 12
+    const monthlyInterestRate = interestRate / 100 / 12
+    const numberOfPayments = loanTerm * 12
     const monthlyPayment =
       (loanAmount * (monthlyInterestRate * Math.pow(1 + monthlyInterestRate, numberOfPayments))) /
       (Math.pow(1 + monthlyInterestRate, numberOfPayments) - 1)
@@ -63,18 +49,18 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
   // Calculate ROI
   const calculateROI = () => {
     const monthlyPayment = calculateMortgage()
-    const annualRent = form.getValues("monthlyRent") * 12
-    const annualExpenses = form.getValues("monthlyExpenses") * 12
+    const annualRent = monthlyRent * 12
+    const annualExpenses = monthlyExpenses * 12
     const annualMortgage = monthlyPayment * 12
     const annualCashFlow = annualRent - annualExpenses - annualMortgage
-    const cashOnCashROI = (annualCashFlow / watchDownPayment) * 100
+    const cashOnCashROI = (annualCashFlow / downPayment) * 100
     return cashOnCashROI
   }
 
   // Calculate cap rate
   const calculateCapRate = () => {
-    const grossOperatingIncome = form.getValues("monthlyRent") * 12
-    const operatingExpenses = form.getValues("monthlyExpenses") * 12
+    const grossOperatingIncome = monthlyRent * 12
+    const operatingExpenses = monthlyExpenses * 12
     const netOperatingIncome = grossOperatingIncome - operatingExpenses
     const capRate = (netOperatingIncome / propertyPrice) * 100
     return capRate
@@ -83,13 +69,13 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
   // Calculate cash flow
   const calculateCashFlow = () => {
     const monthlyPayment = calculateMortgage()
-    const monthlyCashFlow = form.getValues("monthlyRent") - form.getValues("monthlyExpenses") - monthlyPayment
+    const monthlyCashFlow = monthlyRent - monthlyExpenses - monthlyPayment
     return monthlyCashFlow
   }
 
   // Calculate 5-year appreciation
   const calculateAppreciation = () => {
-    const fiveYearValue = propertyPrice * Math.pow(1 + watchAppreciationRate / 100, 5)
+    const fiveYearValue = propertyPrice * Math.pow(1 + appreciationRate / 100, 5)
     const appreciationGain = fiveYearValue - propertyPrice
     return {
       fiveYearValue,
@@ -100,7 +86,7 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
 
   // Handle down payment change
   const handleDownPaymentChange = (value: number) => {
-    form.setValue("downPayment", value)
+    setDownPayment(value)
     setDownPaymentPercent(Math.round((value / propertyPrice) * 100))
   }
 
@@ -108,7 +94,7 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
   const handleDownPaymentPercentChange = (value: number[]) => {
     const percent = value[0]
     setDownPaymentPercent(percent)
-    form.setValue("downPayment", Math.round((percent / 100) * propertyPrice))
+    setDownPayment(Math.round((percent / 100) * propertyPrice))
   }
 
   // Calculate all metrics
@@ -123,7 +109,7 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
       mortgage: {
         monthlyPayment: monthlyPayment.toFixed(2),
         totalLoanAmount: loanAmount.toFixed(2),
-        totalInterestPaid: (monthlyPayment * form.getValues("loanTerm") * 12 - loanAmount).toFixed(2),
+        totalInterestPaid: (monthlyPayment * loanTerm * 12 - loanAmount).toFixed(2),
       },
       investment: {
         cashOnCashROI: roi.toFixed(2),
@@ -155,170 +141,116 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
           </TabsList>
 
           <TabsContent value="inputs" className="space-y-4">
-            <Form {...form}>
-              <div className="space-y-4">
-                <div>
-                  <Label>Property Price: ${propertyPrice.toLocaleString()}</Label>
+            <div className="space-y-4">
+              <div>
+                <Label>Property Price: ${propertyPrice.toLocaleString()}</Label>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="downPayment">Down Payment (${downPayment.toLocaleString()})</Label>
+                  <span className="text-sm text-muted-foreground">{downPaymentPercent}%</span>
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="downPayment"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <div className="flex justify-between">
-                        <FormLabel>Down Payment (${field.value.toLocaleString()})</FormLabel>
-                        <span className="text-sm text-muted-foreground">{downPaymentPercent}%</span>
-                      </div>
-                      <Slider
-                        id="downPaymentSlider"
-                        min={5}
-                        max={50}
-                        step={1}
-                        value={[downPaymentPercent]}
-                        onValueChange={handleDownPaymentPercentChange}
-                      />
-                      <FormControl>
-                        <Input
-                          id="downPayment"
-                          type="number"
-                          {...field}
-                          onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <Slider
+                  id="downPaymentSlider"
+                  min={5}
+                  max={50}
+                  step={1}
+                  value={[downPaymentPercent]}
+                  onValueChange={handleDownPaymentPercentChange}
                 />
-
-                <FormField
-                  control={form.control}
-                  name="interestRate"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <div className="flex justify-between">
-                        <FormLabel>Interest Rate (%)</FormLabel>
-                        <span className="text-sm text-muted-foreground">{field.value}%</span>
-                      </div>
-                      <Slider
-                        id="interestRateSlider"
-                        min={2}
-                        max={10}
-                        step={0.1}
-                        value={[field.value]}
-                        onValueChange={(value) => form.setValue("interestRate", value[0])}
-                      />
-                      <FormControl>
-                        <Input
-                          id="interestRate"
-                          type="number"
-                          step="0.1"
-                          {...field}
-                          onChange={(e) => form.setValue("interestRate", Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="loanTerm"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel>Loan Term (Years)</FormLabel>
-                      <div className="flex gap-2">
-                        {[15, 20, 30].map((term) => (
-                          <Button
-                            key={term}
-                            type="button"
-                            variant={field.value === term ? "default" : "outline"}
-                            className="flex-1"
-                            onClick={() => form.setValue("loanTerm", term)}
-                          >
-                            {term}
-                          </Button>
-                        ))}
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="monthlyRent"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel>Monthly Rent ($)</FormLabel>
-                      <FormControl>
-                        <Input
-                          id="monthlyRent"
-                          type="number"
-                          {...field}
-                          onChange={(e) => form.setValue("monthlyRent", Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="monthlyExpenses"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <FormLabel>Monthly Expenses ($)</FormLabel>
-                      <FormControl>
-                        <Input
-                          id="monthlyExpenses"
-                          type="number"
-                          {...field}
-                          onChange={(e) => form.setValue("monthlyExpenses", Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <p className="text-xs text-muted-foreground">
-                        Include property taxes, insurance, HOA, maintenance, property management, etc.
-                      </p>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="appreciationRate"
-                  render={({ field }) => (
-                    <FormItem className="space-y-2">
-                      <div className="flex justify-between">
-                        <FormLabel>Annual Appreciation Rate (%)</FormLabel>
-                        <span className="text-sm text-muted-foreground">{field.value}%</span>
-                      </div>
-                      <Slider
-                        id="appreciationRateSlider"
-                        min={0}
-                        max={10}
-                        step={0.1}
-                        value={[field.value]}
-                        onValueChange={(value) => form.setValue("appreciationRate", value[0])}
-                      />
-                      <FormControl>
-                        <Input
-                          id="appreciationRate"
-                          type="number"
-                          step="0.1"
-                          {...field}
-                          onChange={(e) => form.setValue("appreciationRate", Number(e.target.value))}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
+                <Input
+                  id="downPayment"
+                  type="number"
+                  value={downPayment}
+                  onChange={(e) => handleDownPaymentChange(Number(e.target.value))}
                 />
               </div>
-            </Form>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="interestRate">Interest Rate (%)</Label>
+                  <span className="text-sm text-muted-foreground">{interestRate}%</span>
+                </div>
+                <Slider
+                  id="interestRateSlider"
+                  min={2}
+                  max={10}
+                  step={0.1}
+                  value={[interestRate]}
+                  onValueChange={(value) => setInterestRate(value[0])}
+                />
+                <Input
+                  id="interestRate"
+                  type="number"
+                  step="0.1"
+                  value={interestRate}
+                  onChange={(e) => setInterestRate(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="loanTerm">Loan Term (Years)</Label>
+                <div className="flex gap-2">
+                  {[15, 20, 30].map((term) => (
+                    <Button
+                      key={term}
+                      type="button"
+                      variant={loanTerm === term ? "default" : "outline"}
+                      className="flex-1"
+                      onClick={() => setLoanTerm(term)}
+                    >
+                      {term}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="monthlyRent">Monthly Rent ($)</Label>
+                <Input
+                  id="monthlyRent"
+                  type="number"
+                  value={monthlyRent}
+                  onChange={(e) => setMonthlyRent(Number(e.target.value))}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="monthlyExpenses">Monthly Expenses ($)</Label>
+                <Input
+                  id="monthlyExpenses"
+                  type="number"
+                  value={monthlyExpenses}
+                  onChange={(e) => setMonthlyExpenses(Number(e.target.value))}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Include property taxes, insurance, HOA, maintenance, property management, etc.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <Label htmlFor="appreciationRate">Annual Appreciation Rate (%)</Label>
+                  <span className="text-sm text-muted-foreground">{appreciationRate}%</span>
+                </div>
+                <Slider
+                  id="appreciationRateSlider"
+                  min={0}
+                  max={10}
+                  step={0.1}
+                  value={[appreciationRate]}
+                  onValueChange={(value) => setAppreciationRate(value[0])}
+                />
+                <Input
+                  id="appreciationRate"
+                  type="number"
+                  step="0.1"
+                  value={appreciationRate}
+                  onChange={(e) => setAppreciationRate(Number(e.target.value))}
+                />
+              </div>
+            </div>
           </TabsContent>
 
           <TabsContent value="results" className="space-y-4">
@@ -417,19 +349,15 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
                       <div className="grid grid-cols-2 gap-4">
                         <div>
                           <h4 className="font-semibold">Initial Investment</h4>
-                          <p className="text-muted-foreground">Down payment: ${watchDownPayment.toLocaleString()}</p>
+                          <p className="text-muted-foreground">Down payment: ${downPayment.toLocaleString()}</p>
                           <p className="text-muted-foreground">
                             Closing costs (est.): ${Math.round(propertyPrice * 0.03).toLocaleString()}
                           </p>
                         </div>
                         <div>
                           <h4 className="font-semibold">Monthly Income</h4>
-                          <p className="text-muted-foreground">
-                            Rental income: ${form.getValues("monthlyRent").toLocaleString()}
-                          </p>
-                          <p className="text-muted-foreground">
-                            Expenses: ${form.getValues("monthlyExpenses").toLocaleString()}
-                          </p>
+                          <p className="text-muted-foreground">Rental income: ${monthlyRent.toLocaleString()}</p>
+                          <p className="text-muted-foreground">Expenses: ${monthlyExpenses.toLocaleString()}</p>
                           <p className="text-muted-foreground">
                             Mortgage: ${calculationResults.mortgage.monthlyPayment}
                           </p>
@@ -461,5 +389,3 @@ export function InvestmentCalculator({ propertyPrice, propertyType, location }: 
     </Card>
   )
 }
-
-export default InvestmentCalculator

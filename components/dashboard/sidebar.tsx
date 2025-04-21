@@ -110,6 +110,3 @@ export function Sidebar({ className }: SidebarProps) {
     </div>
   )
 }
-
-// Add default export
-export default Sidebar

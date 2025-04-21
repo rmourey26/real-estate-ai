@@ -1,11 +1,14 @@
 import type React from "react"
-import { Suspense } from "react"
-import Sidebar from "@/components/dashboard/sidebar"
-import Header from "@/components/dashboard/header"
-import { redirect } from "next/navigation"
+import { Sidebar } from "@/components/dashboard/sidebar"
+import { Header } from "@/components/dashboard/header"
 import { createClient } from "@/utils/supabase/server"
+import { redirect } from "next/navigation"
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
   const supabase = createClient()
   const {
     data: { user },
@@ -16,13 +19,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
   }
 
   return (
-    <div className="flex min-h-screen">
-      <Sidebar className="hidden md:block w-64 border-r" />
+    <div className="flex min-h-screen flex-col md:flex-row">
+      <div className="hidden md:block">
+        <Sidebar className="w-64" />
+      </div>
       <div className="flex-1">
-        <Suspense fallback={<div className="h-16 border-b"></div>}>
-          <Header />
-        </Suspense>
-        <main className="p-4">{children}</main>
+        <Header />
+        <main className="p-4 md:p-6">{children}</main>
       </div>
     </div>
   )
