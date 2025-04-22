@@ -1,4 +1,4 @@
-# re0
+# re0 - Under active development. 
 
 *Automatically synced with your [v0.dev](https://v0.dev) deployments*
 
