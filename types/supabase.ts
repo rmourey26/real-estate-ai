@@ -3,13 +3,14 @@ export type Json = string | number | boolean | null | { [key: string]: Json | un
 export interface Database {
   public: {
     Tables: {
-      user_profiles: {
+      profiles: {
+        // Renamed from user_profiles
         Row: {
-          id: string
+          id: string // Typically references auth.users.id
           email: string
           first_name: string | null
           last_name: string | null
-          full_name: string | null
+          full_name: string | null // This was a generated column
           phone: string | null
           company: string | null
           bio: string | null
@@ -51,7 +52,7 @@ export interface Database {
       notification_settings: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           email_notifications: boolean
           push_notifications: boolean
           marketing_emails: boolean
@@ -92,7 +93,7 @@ export interface Database {
       privacy_settings: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           profile_visibility: "public" | "private"
           show_email: boolean
           show_phone: boolean
@@ -165,7 +166,7 @@ export interface Database {
       user_subscriptions: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           plan_id: string
           status: "active" | "inactive" | "cancelled" | "past_due"
           current_period_start: string | null
@@ -203,7 +204,7 @@ export interface Database {
       billing_history: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           subscription_id: string | null
           amount: number
           currency: string
@@ -372,7 +373,7 @@ export interface Database {
       user_saved_listings: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           listing_id: string
           notes: string | null
           tags: string[] | null
@@ -405,7 +406,7 @@ export interface Database {
         Row: {
           id: string
           listing_id: string
-          user_id: string | null
+          user_id: string | null // Should reference profiles.id
           analysis_type: "investment" | "cma" | "rental" | "flip"
           analysis_data: Json
           confidence_score: number | null
@@ -436,7 +437,7 @@ export interface Database {
       search_history: {
         Row: {
           id: string
-          user_id: string
+          user_id: string // Should reference profiles.id
           search_query: string
           filters: Json | null
           results_count: number | null
