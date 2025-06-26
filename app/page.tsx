@@ -75,8 +75,8 @@ export default async function Home() {
               <div className="flex justify-center">
                 <div className="relative w-full max-w-[500px] aspect-video rounded-xl overflow-hidden shadow-xl">
                   <img
-                    src="/placeholder.svg?height=500&width=800"
-                    alt="Real Estate AI Dashboard Preview"
+                    src="/images/hero-ai-realestate.png"
+                    alt="AI powered real estate analysis showing futuristic cityscape with data streams"
                     className="object-cover w-full h-full"
                   />
                 </div>
