@@ -1,7 +1,4 @@
-"use client"
-
-import { useState } from "react"
-import { Bell, Search, Settings, User, LogOut, CreditCard } from "lucide-react"
+import { Bell, Search, Settings, User, CreditCard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,29 +11,49 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { createClient } from "@/utils/supabase/client"
-import { useRouter } from "next/navigation"
+import { createClient } from "@/utils/supabase/server"
 import Link from "next/link"
+import { SignOutButton } from "./sign-out-button"
 
-export function Header() {
-  const [notifications] = useState(3) // Mock notification count
-  const router = useRouter()
+export async function Header() {
   const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-  const handleSignOut = async () => {
-    await supabase.auth.signOut()
-    router.push("/")
-    router.refresh()
+  // Fetch user profile data
+  const { data: profile } = await supabase.from("profiles").select("*").eq("id", user?.id).single()
+
+  const notifications = 3 // Mock notification count
+
+  // Get user initials for avatar fallback
+  const getInitials = (name: string | null, email: string | null) => {
+    if (name) {
+      return name
+        .split(" ")
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
+    }
+    if (email) {
+      return email.slice(0, 2).toUpperCase()
+    }
+    return "U"
   }
 
+  const displayName = profile?.full_name || user?.email?.split("@")[0] || "User"
+  const displayEmail = user?.email || ""
+  const avatarInitials = getInitials(profile?.full_name, user?.email)
+
   return (
-    <header className="border-b bg-white">
+    <header className="border-b bg-white sticky top-0 z-50">
       <div className="flex h-16 items-center px-4 gap-4">
         {/* Search */}
         <div className="flex-1 max-w-md">
           <div className="relative">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input type="search" placeholder="Search properties, locations..." className="pl-8" />
+            <Input type="search" placeholder="Search properties, locations..." className="pl-8 w-full" />
           </div>
         </div>
 
@@ -52,6 +69,7 @@ export function Header() {
                 {notifications}
               </Badge>
             )}
+            <span className="sr-only">Notifications</span>
           </Button>
 
           {/* Profile Dropdown */}
@@ -59,16 +77,21 @@ export function Header() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="/placeholder.svg?height=32&width=32" alt="Profile" />
-                  <AvatarFallback>JD</AvatarFallback>
+                  <AvatarImage src={profile?.avatar_url || undefined} alt={`${displayName}'s avatar`} />
+                  <AvatarFallback className="text-xs font-medium">{avatarInitials}</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuContent className="w-64" align="end" forceMount>
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
-                  <p className="text-sm font-medium leading-none">John Doe</p>
-                  <p className="text-xs leading-none text-muted-foreground">john.doe@example.com</p>
+                  <p className="text-sm font-medium leading-none truncate">{displayName}</p>
+                  <p className="text-xs leading-none text-muted-foreground truncate">{displayEmail}</p>
+                  {profile?.subscription_tier && (
+                    <Badge variant="secondary" className="w-fit text-xs mt-1">
+                      {profile.subscription_tier}
+                    </Badge>
+                  )}
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -91,9 +114,8 @@ export function Header() {
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="cursor-pointer text-red-600 focus:text-red-600" onClick={handleSignOut}>
-                <LogOut className="mr-2 h-4 w-4" />
-                <span>Log out</span>
+              <DropdownMenuItem asChild>
+                <SignOutButton />
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -103,5 +125,4 @@ export function Header() {
   )
 }
 
-// Add default export
 export default Header

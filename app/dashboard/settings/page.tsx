@@ -10,6 +10,7 @@ import { SubscriptionSettings } from "@/components/settings/subscription-setting
 import { BillingHistory } from "@/components/settings/billing-history"
 import { DangerZone } from "@/components/settings/danger-zone"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default async function SettingsPage() {
   const supabase = createClient()
@@ -22,29 +23,68 @@ export default async function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6">
+    <div className="container mx-auto py-4 px-4 sm:py-6 sm:px-6 lg:px-8 max-w-7xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Account Settings</h1>
-        <p className="text-muted-foreground">Manage your account settings, subscription, and preferences.</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">Account Settings</h1>
+        <p className="text-muted-foreground text-sm sm:text-base mt-1">
+          Manage your account settings, subscription, and preferences.
+        </p>
       </div>
 
-      <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-6">
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
-          <TabsTrigger value="privacy">Privacy</TabsTrigger>
-          <TabsTrigger value="subscription">Subscription</TabsTrigger>
-          <TabsTrigger value="billing">Billing</TabsTrigger>
-          <TabsTrigger value="account">Account</TabsTrigger>
-        </TabsList>
+      <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
+        {/* Mobile-optimized tabs list */}
+        <div className="w-full">
+          <ScrollArea className="w-full">
+            <TabsList className="grid w-full grid-cols-3 sm:grid-cols-6 h-auto p-1 bg-muted rounded-lg">
+              <TabsTrigger
+                value="profile"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                Profile
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                <span className="hidden sm:inline">Notifications</span>
+                <span className="sm:hidden">Notify</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="privacy"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                Privacy
+              </TabsTrigger>
+              <TabsTrigger
+                value="subscription"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                <span className="hidden sm:inline">Subscription</span>
+                <span className="sm:hidden">Plan</span>
+              </TabsTrigger>
+              <TabsTrigger
+                value="billing"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                Billing
+              </TabsTrigger>
+              <TabsTrigger
+                value="account"
+                className="text-xs sm:text-sm px-2 py-2 sm:px-3 data-[state=active]:bg-background"
+              >
+                Account
+              </TabsTrigger>
+            </TabsList>
+          </ScrollArea>
+        </div>
 
-        <TabsContent value="profile">
+        <TabsContent value="profile" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>Update your personal information and preferences.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Profile Information</CardTitle>
+              <CardDescription className="text-sm">Update your personal information and preferences.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Suspense fallback={<ProfileSkeleton />}>
                 <ProfileSettings userId={user.id} />
               </Suspense>
@@ -52,13 +92,15 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="notifications">
+        <TabsContent value="notifications" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Notification Preferences</CardTitle>
-              <CardDescription>Choose how you want to be notified about updates and alerts.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Notification Preferences</CardTitle>
+              <CardDescription className="text-sm">
+                Choose how you want to be notified about updates and alerts.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Suspense fallback={<NotificationSkeleton />}>
                 <NotificationSettings userId={user.id} />
               </Suspense>
@@ -66,13 +108,13 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="privacy">
+        <TabsContent value="privacy" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Privacy Settings</CardTitle>
-              <CardDescription>Control your privacy and data sharing preferences.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Privacy Settings</CardTitle>
+              <CardDescription className="text-sm">Control your privacy and data sharing preferences.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Suspense fallback={<PrivacySkeleton />}>
                 <PrivacySettings userId={user.id} />
               </Suspense>
@@ -80,13 +122,15 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="subscription">
+        <TabsContent value="subscription" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Subscription Management</CardTitle>
-              <CardDescription>Manage your subscription plan and billing preferences.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Subscription Management</CardTitle>
+              <CardDescription className="text-sm">
+                Manage your subscription plan and billing preferences.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Suspense fallback={<SubscriptionSkeleton />}>
                 <SubscriptionSettings userId={user.id} />
               </Suspense>
@@ -94,13 +138,13 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="billing">
+        <TabsContent value="billing" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Billing History</CardTitle>
-              <CardDescription>View your billing history and download invoices.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Billing History</CardTitle>
+              <CardDescription className="text-sm">View your billing history and download invoices.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <Suspense fallback={<BillingSkeleton />}>
                 <BillingHistory userId={user.id} />
               </Suspense>
@@ -108,13 +152,13 @@ export default async function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="account">
+        <TabsContent value="account" className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle>Account Management</CardTitle>
-              <CardDescription>Manage your account security and deletion options.</CardDescription>
+            <CardHeader className="pb-4">
+              <CardTitle className="text-lg sm:text-xl">Account Management</CardTitle>
+              <CardDescription className="text-sm">Manage your account security and deletion options.</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-0">
               <DangerZone userEmail={user.email!} />
             </CardContent>
           </Card>
@@ -127,9 +171,21 @@ export default async function SettingsPage() {
 function ProfileSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-4 w-3/4" />
-      <Skeleton className="h-4 w-1/2" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-16" />
+        <Skeleton className="h-20 w-full" />
+      </div>
+      <Skeleton className="h-10 w-24" />
     </div>
   )
 }
@@ -138,9 +194,12 @@ function NotificationSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 6 }).map((_, i) => (
-        <div key={i} className="flex items-center space-x-2">
-          <Skeleton className="h-4 w-4" />
-          <Skeleton className="h-4 w-48" />
+        <div key={i} className="flex items-center justify-between py-2">
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-48" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <Skeleton className="h-6 w-11" />
         </div>
       ))}
     </div>
@@ -151,9 +210,12 @@ function PrivacySkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="flex items-center space-x-2">
-          <Skeleton className="h-4 w-4" />
-          <Skeleton className="h-4 w-64" />
+        <div key={i} className="flex items-center justify-between py-2">
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-3 w-28" />
+          </div>
+          <Skeleton className="h-6 w-11" />
         </div>
       ))}
     </div>
@@ -163,8 +225,16 @@ function PrivacySkeleton() {
 function SubscriptionSkeleton() {
   return (
     <div className="space-y-4">
-      <Skeleton className="h-32 w-full" />
-      <Skeleton className="h-8 w-32" />
+      <div className="border rounded-lg p-4">
+        <div className="flex items-center justify-between mb-4">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-32" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-6 w-16" />
+        </div>
+        <Skeleton className="h-10 w-32" />
+      </div>
     </div>
   )
 }
@@ -173,7 +243,16 @@ function BillingSkeleton() {
   return (
     <div className="space-y-4">
       {Array.from({ length: 5 }).map((_, i) => (
-        <Skeleton key={i} className="h-16 w-full" />
+        <div key={i} className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="space-y-1">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+          <div className="text-right space-y-1">
+            <Skeleton className="h-4 w-16" />
+            <Skeleton className="h-3 w-12" />
+          </div>
+        </div>
       ))}
     </div>
   )
