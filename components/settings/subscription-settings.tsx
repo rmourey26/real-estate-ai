@@ -161,7 +161,7 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
       {currentPlan && (
         <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
                 <div className="relative">
                   <currentPlan.icon className="h-5 w-5" />
@@ -178,8 +178,10 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
                 </div>
               </div>
               <div className="text-right">
-                <div className="text-2xl font-bold">${currentPlan.price}</div>
-                <div className="text-sm text-muted-foreground">per month</div>
+                <div className="flex items-baseline space-x-1">
+                  <span className="text-2xl font-bold">${currentPlan.price}</span>
+                  <span className="text-sm text-muted-foreground font-medium">/month</span>
+                </div>
               </div>
             </div>
             <CardDescription>{currentPlan.description}</CardDescription>
@@ -294,8 +296,8 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
                     </CardTitle>
                   </div>
                   <CardDescription>{plan.description}</CardDescription>
-                  <div className="text-3xl font-bold">
-                    ${plan.price}
+                  <div className="flex items-baseline space-x-1">
+                    <span className="text-3xl font-bold">${plan.price}</span>
                     <span className="text-sm font-normal text-muted-foreground">/{plan.interval}</span>
                   </div>
                 </CardHeader>
