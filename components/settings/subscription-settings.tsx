@@ -158,13 +158,23 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
     <div className="space-y-6">
       {/* Current Subscription */}
       {currentPlan && (
-        <Card className="border-2 border-primary">
+        <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <currentPlan.icon className="h-5 w-5" />
-                <CardTitle>{currentPlan.name}</CardTitle>
-                <Badge variant="secondary">Current Plan</Badge>
+              <div className="flex items-center space-x-3">
+                <div className="relative">
+                  <currentPlan.icon className="h-5 w-5" />
+                  {/* Green beacon indicator */}
+                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white">
+                    <div className="h-full w-full bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <CardTitle className="text-lg">{currentPlan.name}</CardTitle>
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5 h-5">
+                    Current
+                  </Badge>
+                </div>
               </div>
               <div className="text-right">
                 <div className="text-2xl font-bold">${currentPlan.price}</div>
@@ -246,14 +256,37 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
             const isCurrentPlan = plan.id === currentSubscription.planId
 
             return (
-              <Card key={plan.id} className={`relative ${plan.popular ? "border-primary" : ""}`}>
-                {plan.popular && (
+              <Card
+                key={plan.id}
+                className={`relative ${plan.popular ? "border-primary" : ""} ${isCurrentPlan ? "opacity-75" : ""}`}
+              >
+                {plan.popular && !isCurrentPlan && (
                   <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">Most Popular</Badge>
+                )}
+                {isCurrentPlan && (
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-2 py-1 bg-green-100 text-green-800 border-green-200"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                        <span>Active Plan</span>
+                      </div>
+                    </Badge>
+                  </div>
                 )}
                 <CardHeader>
                   <div className="flex items-center space-x-2">
-                    <Icon className="h-5 w-5" />
-                    <CardTitle>{plan.name}</CardTitle>
+                    <div className="relative">
+                      <Icon className="h-5 w-5" />
+                      {isCurrentPlan && (
+                        <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-green-500 rounded-full border border-white"></div>
+                      )}
+                    </div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <span>{plan.name}</span>
+                    </CardTitle>
                   </div>
                   <CardDescription>{plan.description}</CardDescription>
                   <div className="text-3xl font-bold">
@@ -265,15 +298,18 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
                   <ul className="space-y-2 mb-6">
                     {plan.features.map((feature, index) => (
                       <li key={index} className="flex items-center space-x-2">
-                        <Check className="h-4 w-4 text-green-500" />
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
                         <span className="text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
 
                   {isCurrentPlan ? (
-                    <Button disabled className="w-full">
-                      Current Plan
+                    <Button disabled className="w-full bg-green-100 text-green-800 hover:bg-green-100">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                        <span>Current Plan</span>
+                      </div>
                     </Button>
                   ) : (
                     <Button
@@ -300,25 +336,48 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="text-center">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="text-2xl font-bold">47</div>
               <div className="text-sm text-muted-foreground">
                 Property Searches
                 {currentPlan?.maxSearches === -1 ? " (Unlimited)" : ` / ${currentPlan?.maxSearches}`}
               </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{
+                    width:
+                      currentPlan?.maxSearches === -1 ? "100%" : `${(47 / (currentPlan?.maxSearches || 50)) * 100}%`,
+                  }}
+                ></div>
+              </div>
             </div>
-            <div className="text-center">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="text-2xl font-bold">12</div>
               <div className="text-sm text-muted-foreground">
                 Saved Properties
                 {currentPlan?.maxProperties === -1 ? " (Unlimited)" : ` / ${currentPlan?.maxProperties}`}
               </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{
+                    width:
+                      currentPlan?.maxProperties === -1
+                        ? "100%"
+                        : `${(12 / (currentPlan?.maxProperties || 10)) * 100}%`,
+                  }}
+                ></div>
+              </div>
             </div>
-            <div className="text-center">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
               <div className="text-2xl font-bold">8</div>
               <div className="text-sm text-muted-foreground">
                 AI Analyses Used
                 {currentPlan?.aiAnalysisIncluded ? " (Included)" : " (Not Available)"}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div className="bg-purple-600 h-2 rounded-full w-4/5"></div>
               </div>
             </div>
           </div>
