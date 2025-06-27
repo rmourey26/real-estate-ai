@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { PlanComparisonModal } from "./plan-comparison-modal"
 
 interface SubscriptionSettingsProps {
   userId: string
@@ -203,7 +204,8 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
                 </div>
               </div>
 
-              <div className="flex space-x-2">
+              <div className="flex flex-wrap gap-2">
+                <PlanComparisonModal currentPlanId={currentSubscription.planId} onUpgrade={handleUpgrade} />
                 {!currentSubscription.cancelAtPeriodEnd ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
@@ -249,7 +251,10 @@ export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
 
       {/* Available Plans */}
       <div>
-        <h3 className="text-lg font-semibold mb-4">Available Plans</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Available Plans</h3>
+          <PlanComparisonModal currentPlanId={currentSubscription.planId} onUpgrade={handleUpgrade} />
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {subscriptionPlans.map((plan) => {
             const Icon = plan.icon
