@@ -1,147 +1,180 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useState } from "react"
 import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
-import { Loader2, Star, Check, CreditCard, Calendar, BarChart3 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
+import { Check, Crown, Zap, Star } from "lucide-react"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { PlanComparisonModal } from "./plan-comparison-modal"
 
-interface SubscriptionPlan {
-  id: string
-  name: string
-  price: number
-  interval: "month" | "year"
-  features: string[]
-  description: string
-  popular?: boolean
+interface SubscriptionSettingsProps {
+  userId: string
 }
 
-interface UserSubscription {
-  id: string
-  plan_id: string
-  status: "active" | "canceled" | "past_due"
-  current_period_end: string
-  cancel_at_period_end: boolean
-}
-
-interface SubscriptionUsage {
-  property_searches: { used: number; limit: number }
-  saved_properties: { used: number; limit: number }
-  ai_analyses: { used: number; limit: number }
-}
-
-const subscriptionPlans: SubscriptionPlan[] = [
+// Mock subscription plans
+const subscriptionPlans = [
   {
     id: "starter",
     name: "Starter",
+    description: "Perfect for getting started with real estate investing",
     price: 29,
     interval: "month",
-    description: "Perfect for getting started with real estate investing",
-    features: [
-      "50 property searches per month",
-      "10 saved properties",
-      "Basic market insights",
-      "Investment calculator",
-      "Email support",
-    ],
+    features: ["Up to 10 property searches per month", "Basic market insights", "Email support", "Property alerts"],
+    maxProperties: 10,
+    maxSearches: 50,
+    aiAnalysisIncluded: false,
+    icon: Zap,
   },
   {
     id: "professional",
     name: "Professional",
+    description: "For serious investors and real estate professionals",
     price: 79,
     interval: "month",
-    description: "For serious investors and real estate professionals",
-    popular: true,
     features: [
       "Unlimited property searches",
-      "100 saved properties",
-      "Advanced market insights",
-      "AI-powered analysis",
-      "Neighborhood analysis",
-      "CMA reports",
+      "Advanced AI market analysis",
       "Priority support",
+      "Custom property alerts",
+      "Investment calculator",
+      "Neighborhood analysis",
     ],
+    maxProperties: 100,
+    maxSearches: -1,
+    aiAnalysisIncluded: true,
+    icon: Star,
+    popular: true,
   },
   {
     id: "enterprise",
     name: "Enterprise",
+    description: "For teams and large-scale operations",
     price: 199,
     interval: "month",
-    description: "For teams and large-scale operations",
     features: [
       "Everything in Professional",
-      "Unlimited saved properties",
-      "Team collaboration",
+      "Team collaboration tools",
       "API access",
       "Custom integrations",
+      "Dedicated account manager",
       "White-label options",
-      "Dedicated support",
     ],
+    maxProperties: -1,
+    maxSearches: -1,
+    aiAnalysisIncluded: true,
+    icon: Crown,
   },
 ]
 
-export function SubscriptionSettings() {
-  const [loading, setLoading] = useState(true)
-  const [subscription, setSubscription] = useState<UserSubscription | null>(null)
-  const [usage, setUsage] = useState<SubscriptionUsage | null>(null)
-  const [showComparison, setShowComparison] = useState(false)
+// Mock current subscription
+const currentSubscription = {
+  id: "sub_123",
+  planId: "professional",
+  status: "active",
+  currentPeriodEnd: new Date("2024-02-15"),
+  cancelAtPeriodEnd: false,
+}
 
-  useEffect(() => {
-    // Simulate loading subscription data
-    setTimeout(() => {
-      setSubscription({
-        id: "sub_123",
-        plan_id: "professional",
-        status: "active",
-        current_period_end: "2024-02-14",
-        cancel_at_period_end: false,
+export function SubscriptionSettings({ userId }: SubscriptionSettingsProps) {
+  const [isLoading, setIsLoading] = useState(false)
+  const { toast } = useToast()
+
+  const currentPlan = subscriptionPlans.find((plan) => plan.id === currentSubscription.planId)
+
+  const handleUpgrade = async (planId: string) => {
+    setIsLoading(true)
+    try {
+      // Mock checkout session creation
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast({
+        title: "Redirecting to checkout",
+        description: "You will be redirected to complete your subscription upgrade.",
       })
-
-      setUsage({
-        property_searches: { used: 127, limit: -1 }, // -1 for unlimited
-        saved_properties: { used: 23, limit: 100 },
-        ai_analyses: { used: 45, limit: -1 },
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to create checkout session",
+        variant: "destructive",
       })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-      setLoading(false)
-    }, 1000)
-  }, [])
+  const handleCancelSubscription = async (immediate = false) => {
+    setIsLoading(true)
+    try {
+      // Mock cancellation
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast({
+        title: "Subscription updated",
+        description: immediate
+          ? "Your subscription has been cancelled immediately."
+          : "Your subscription will be cancelled at the end of the current billing period.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  const currentPlan = subscription ? subscriptionPlans.find((p) => p.id === subscription.plan_id) : null
-
-  if (loading) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center space-x-2">
-          <Loader2 className="h-4 w-4 animate-spin" />
-          <span>Loading subscription details...</span>
-        </div>
-      </div>
-    )
+  const handleReactivateSubscription = async () => {
+    setIsLoading(true)
+    try {
+      // Mock reactivation
+      await new Promise((resolve) => setTimeout(resolve, 1000))
+      toast({
+        title: "Subscription reactivated",
+        description: "Your subscription has been reactivated successfully.",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to reactivate subscription",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <div className="space-y-6">
       {/* Current Subscription */}
-      {subscription && currentPlan && (
-        <Card className="bg-primary/5 border-primary/20">
+      {currentPlan && (
+        <Card className="border-2 border-primary/20 bg-primary/5">
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between">
               <div className="flex items-center space-x-3">
                 <div className="relative">
-                  <Star className="h-6 w-6 text-primary" />
-                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 border-2 border-white rounded-full animate-pulse" />
+                  <currentPlan.icon className="h-5 w-5" />
+                  {/* Green beacon indicator */}
+                  <div className="absolute -top-1 -right-1 h-3 w-3 bg-green-500 rounded-full border-2 border-white">
+                    <div className="h-full w-full bg-green-500 rounded-full animate-pulse"></div>
+                  </div>
                 </div>
-                <div>
-                  <CardTitle className="flex items-center space-x-2">
-                    <span>{currentPlan.name}</span>
-                    <Badge variant="outline" className="bg-green-100 text-green-800 text-xs px-2 py-0.5 h-5">
-                      Current
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription>{currentPlan.description}</CardDescription>
+                <div className="flex items-center space-x-2">
+                  <CardTitle className="text-lg">{currentPlan.name}</CardTitle>
+                  <Badge variant="secondary" className="text-xs px-2 py-0.5 h-5">
+                    Current
+                  </Badge>
                 </div>
               </div>
               <div className="text-right">
@@ -151,96 +184,67 @@ export function SubscriptionSettings() {
                 </div>
               </div>
             </div>
+            <CardDescription>{currentPlan.description}</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  Next billing date
-                </h4>
-                <p className="text-sm text-muted-foreground">{subscription.current_period_end}</p>
-              </div>
-              <div>
-                <h4 className="text-sm font-medium mb-2">Status</h4>
-                <Badge variant="outline" className="bg-green-100 text-green-800">
-                  <div className="w-2 h-2 bg-green-500 rounded-full mr-2" />
-                  {subscription.status}
-                </Badge>
-              </div>
-            </div>
-
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => setShowComparison(true)} className="flex items-center gap-2">
-                <BarChart3 className="h-4 w-4" />
-                Compare Plans
-              </Button>
-              <Button variant="outline" className="flex items-center gap-2 bg-transparent">
-                <CreditCard className="h-4 w-4" />
-                Manage Billing
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Usage Statistics */}
-      {usage && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Usage This Month</CardTitle>
-            <CardDescription>Track your current usage against plan limits</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4">
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Property Searches</span>
-                  <span>
-                    {usage.property_searches.used}
-                    {usage.property_searches.limit > 0 ? ` / ${usage.property_searches.limit}` : " (Unlimited)"}
-                  </span>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm font-medium">Next billing date</p>
+                  <p className="text-sm text-muted-foreground">
+                    {currentSubscription.currentPeriodEnd.toLocaleDateString()}
+                  </p>
                 </div>
-                <Progress
-                  value={
-                    usage.property_searches.limit > 0
-                      ? (usage.property_searches.used / usage.property_searches.limit) * 100
-                      : 100
-                  }
-                  className="h-2"
-                />
+                <div>
+                  <p className="text-sm font-medium">Status</p>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant={currentSubscription.status === "active" ? "default" : "secondary"}>
+                      {currentSubscription.status}
+                    </Badge>
+                    {currentSubscription.cancelAtPeriodEnd && <Badge variant="destructive">Cancelling</Badge>}
+                  </div>
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Saved Properties</span>
-                  <span>
-                    {usage.saved_properties.used}
-                    {usage.saved_properties.limit > 0 ? ` / ${usage.saved_properties.limit}` : " (Unlimited)"}
-                  </span>
-                </div>
-                <Progress
-                  value={
-                    usage.saved_properties.limit > 0
-                      ? (usage.saved_properties.used / usage.saved_properties.limit) * 100
-                      : 100
-                  }
-                  className="h-2"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>AI Analyses</span>
-                  <span>
-                    {usage.ai_analyses.used}
-                    {usage.ai_analyses.limit > 0 ? ` / ${usage.ai_analyses.limit}` : " (Unlimited)"}
-                  </span>
-                </div>
-                <Progress
-                  value={usage.ai_analyses.limit > 0 ? (usage.ai_analyses.used / usage.ai_analyses.limit) * 100 : 100}
-                  className="h-2"
-                />
+              <div className="flex flex-wrap gap-2">
+                <PlanComparisonModal currentPlanId={currentSubscription.planId} onUpgrade={handleUpgrade} />
+                {!currentSubscription.cancelAtPeriodEnd ? (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" size="sm">
+                        Cancel Subscription
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Cancel Subscription</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Are you sure you want to cancel your subscription? You can choose to cancel immediately or at
+                          the end of your current billing period.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Keep Subscription</AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => handleCancelSubscription(false)}
+                          className="bg-orange-600 hover:bg-orange-700"
+                        >
+                          Cancel at Period End
+                        </AlertDialogAction>
+                        <AlertDialogAction
+                          onClick={() => handleCancelSubscription(true)}
+                          className="bg-red-600 hover:bg-red-700"
+                        >
+                          Cancel Immediately
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                ) : (
+                  <Button variant="outline" size="sm" onClick={handleReactivateSubscription} disabled={isLoading}>
+                    Reactivate Subscription
+                  </Button>
+                )}
               </div>
             </div>
           </CardContent>
@@ -248,95 +252,144 @@ export function SubscriptionSettings() {
       )}
 
       {/* Available Plans */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Available Plans</h3>
+          <PlanComparisonModal currentPlanId={currentSubscription.planId} onUpgrade={handleUpgrade} />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {subscriptionPlans.map((plan) => {
+            const Icon = plan.icon
+            const isCurrentPlan = plan.id === currentSubscription.planId
+
+            return (
+              <Card
+                key={plan.id}
+                className={`relative ${plan.popular ? "border-primary" : ""} ${isCurrentPlan ? "opacity-75" : ""}`}
+              >
+                {plan.popular && !isCurrentPlan && (
+                  <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2">Most Popular</Badge>
+                )}
+                {isCurrentPlan && (
+                  <div className="absolute -top-2 left-1/2 transform -translate-x-1/2">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs px-2 py-1 bg-green-100 text-green-800 border-green-200"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                        <span>Active Plan</span>
+                      </div>
+                    </Badge>
+                  </div>
+                )}
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <div className="relative">
+                      <Icon className="h-5 w-5" />
+                      {isCurrentPlan && (
+                        <div className="absolute -top-1 -right-1 h-2.5 w-2.5 bg-green-500 rounded-full border border-white"></div>
+                      )}
+                    </div>
+                    <CardTitle className="flex items-center space-x-2">
+                      <span>{plan.name}</span>
+                    </CardTitle>
+                  </div>
+                  <CardDescription>{plan.description}</CardDescription>
+                  <div className="flex items-baseline space-x-1">
+                    <span className="text-3xl font-bold">${plan.price}</span>
+                    <span className="text-sm font-normal text-muted-foreground">/{plan.interval}</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2 mb-6">
+                    {plan.features.map((feature, index) => (
+                      <li key={index} className="flex items-center space-x-2">
+                        <Check className="h-4 w-4 text-green-500 flex-shrink-0" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+
+                  {isCurrentPlan ? (
+                    <Button disabled className="w-full bg-green-100 text-green-800 hover:bg-green-100">
+                      <div className="flex items-center space-x-2">
+                        <div className="h-2 w-2 bg-green-500 rounded-full"></div>
+                        <span>Current Plan</span>
+                      </div>
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={() => handleUpgrade(plan.id)}
+                      disabled={isLoading}
+                      className="w-full"
+                      variant={plan.popular ? "default" : "outline"}
+                    >
+                      {currentPlan && plan.price > currentPlan.price ? "Upgrade" : "Downgrade"}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Usage Information */}
       <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <div>
-            <CardTitle>Available Plans</CardTitle>
-            <CardDescription>Choose the plan that best fits your needs</CardDescription>
-          </div>
-          <Button variant="outline" onClick={() => setShowComparison(true)} className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4" />
-            Compare Plans
-          </Button>
+        <CardHeader>
+          <CardTitle>Current Usage</CardTitle>
+          <CardDescription>Your usage for the current billing period</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            {subscriptionPlans.map((plan) => {
-              const isCurrentPlan = subscription?.plan_id === plan.id
-
-              return (
-                <Card
-                  key={plan.id}
-                  className={`relative ${isCurrentPlan ? "opacity-75 bg-primary/5 border-primary/20" : ""} ${plan.popular ? "border-primary" : ""}`}
-                >
-                  {plan.popular && !isCurrentPlan && (
-                    <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-primary">
-                      Most Popular
-                    </Badge>
-                  )}
-                  {isCurrentPlan && (
-                    <Badge className="absolute -top-2 left-1/2 transform -translate-x-1/2 bg-green-100 text-green-800">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
-                      Active Plan
-                    </Badge>
-                  )}
-
-                  <CardHeader className="text-center">
-                    <CardTitle className="flex items-center justify-center gap-2">
-                      {plan.name}
-                      {isCurrentPlan && (
-                        <div className="relative">
-                          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                        </div>
-                      )}
-                    </CardTitle>
-                    <div className="flex items-baseline justify-center space-x-1">
-                      <span className="text-3xl font-bold">${plan.price}</span>
-                      <span className="text-sm text-muted-foreground font-medium">/month</span>
-                    </div>
-                    <CardDescription>{plan.description}</CardDescription>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4">
-                    <ul className="space-y-2">
-                      {plan.features.map((feature, index) => (
-                        <li key={index} className="flex items-start space-x-2 text-sm">
-                          <Check className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />
-                          <span>{feature}</span>
-                        </li>
-                      ))}
-                    </ul>
-
-                    <Button
-                      className="w-full"
-                      variant={isCurrentPlan ? "outline" : plan.popular ? "default" : "outline"}
-                      disabled={isCurrentPlan}
-                    >
-                      {isCurrentPlan ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-2 h-2 bg-green-500 rounded-full" />
-                          Current Plan
-                        </div>
-                      ) : plan.price > (currentPlan?.price || 0) ? (
-                        "Upgrade"
-                      ) : (
-                        "Downgrade"
-                      )}
-                    </Button>
-                  </CardContent>
-                </Card>
-              )
-            })}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">47</div>
+              <div className="text-sm text-muted-foreground">
+                Property Searches
+                {currentPlan?.maxSearches === -1 ? " (Unlimited)" : ` / ${currentPlan?.maxSearches}`}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-blue-600 h-2 rounded-full"
+                  style={{
+                    width:
+                      currentPlan?.maxSearches === -1 ? "100%" : `${(47 / (currentPlan?.maxSearches || 50)) * 100}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">12</div>
+              <div className="text-sm text-muted-foreground">
+                Saved Properties
+                {currentPlan?.maxProperties === -1 ? " (Unlimited)" : ` / ${currentPlan?.maxProperties}`}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div
+                  className="bg-green-600 h-2 rounded-full"
+                  style={{
+                    width:
+                      currentPlan?.maxProperties === -1
+                        ? "100%"
+                        : `${(12 / (currentPlan?.maxProperties || 10)) * 100}%`,
+                  }}
+                ></div>
+              </div>
+            </div>
+            <div className="text-center p-4 bg-muted/50 rounded-lg">
+              <div className="text-2xl font-bold">8</div>
+              <div className="text-sm text-muted-foreground">
+                AI Analyses Used
+                {currentPlan?.aiAnalysisIncluded ? " (Included)" : " (Not Available)"}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div className="bg-purple-600 h-2 rounded-full w-4/5"></div>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
-
-      <PlanComparisonModal
-        isOpen={showComparison}
-        onClose={() => setShowComparison(false)}
-        plans={subscriptionPlans}
-        currentPlanId={subscription?.plan_id}
-      />
     </div>
   )
 }
