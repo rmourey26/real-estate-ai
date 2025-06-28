@@ -1,128 +1,56 @@
 "use client"
 
 import { useState } from "react"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Check, X, Crown, Zap, Star, Scale } from "lucide-react"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Check, X, Star, Loader2 } from "lucide-react"
+
+interface SubscriptionPlan {
+  id: string
+  name: string
+  price: number
+  interval: "month" | "year"
+  features: string[]
+  description: string
+  popular?: boolean
+}
 
 interface PlanComparisonModalProps {
-  currentPlanId: string
-  onUpgrade: (planId: string) => Promise<void>
+  isOpen: boolean
+  onClose: () => void
+  plans: SubscriptionPlan[]
+  currentPlanId?: string
 }
 
-// Mock subscription plans with detailed features
-const subscriptionPlans = [
-  {
-    id: "starter",
-    name: "Starter",
-    description: "Perfect for getting started with real estate investing",
-    price: 29,
-    interval: "month",
-    icon: Zap,
-    features: {
-      propertySearches: "50 per month",
-      savedProperties: "10",
-      marketInsights: "Basic",
-      aiAnalysis: false,
-      investmentCalculator: true,
-      neighborhoodAnalysis: "Limited",
-      cmaReports: false,
-      prioritySupport: false,
-      apiAccess: false,
-      teamCollaboration: false,
-      customIntegrations: false,
-      whiteLabel: false,
-    },
-  },
-  {
-    id: "professional",
-    name: "Professional",
-    description: "For serious investors and real estate professionals",
-    price: 79,
-    interval: "month",
-    icon: Star,
-    popular: true,
-    features: {
-      propertySearches: "Unlimited",
-      savedProperties: "100",
-      marketInsights: "Advanced",
-      aiAnalysis: true,
-      investmentCalculator: true,
-      neighborhoodAnalysis: "Full",
-      cmaReports: "Unlimited",
-      prioritySupport: true,
-      apiAccess: false,
-      teamCollaboration: false,
-      customIntegrations: false,
-      whiteLabel: false,
-    },
-  },
-  {
-    id: "enterprise",
-    name: "Enterprise",
-    description: "For teams and large-scale operations",
-    price: 199,
-    interval: "month",
-    icon: Crown,
-    features: {
-      propertySearches: "Unlimited",
-      savedProperties: "Unlimited",
-      marketInsights: "Premium",
-      aiAnalysis: true,
-      investmentCalculator: true,
-      neighborhoodAnalysis: "Full",
-      cmaReports: "Unlimited",
-      prioritySupport: true,
-      apiAccess: true,
-      teamCollaboration: true,
-      customIntegrations: true,
-      whiteLabel: true,
-    },
-  },
+const featureMatrix = [
+  { feature: "Property Searches", starter: "50 per month", professional: "Unlimited", enterprise: "Unlimited" },
+  { feature: "Saved Properties", starter: "10", professional: "100", enterprise: "Unlimited" },
+  { feature: "Market Insights", starter: "Basic", professional: "Advanced", enterprise: "Premium" },
+  { feature: "AI Analysis", starter: false, professional: true, enterprise: true },
+  { feature: "Investment Calculator", starter: true, professional: true, enterprise: true },
+  { feature: "Neighborhood Analysis", starter: "Limited", professional: "Full", enterprise: "Full" },
+  { feature: "CMA Reports", starter: false, professional: "Unlimited", enterprise: "Unlimited" },
+  { feature: "Priority Support", starter: false, professional: true, enterprise: true },
+  { feature: "API Access", starter: false, professional: false, enterprise: true },
+  { feature: "Team Collaboration", starter: false, professional: false, enterprise: true },
+  { feature: "Custom Integrations", starter: false, professional: false, enterprise: true },
+  { feature: "White Label", starter: false, professional: false, enterprise: true },
 ]
 
-const featureLabels = {
-  propertySearches: "Property Searches",
-  savedProperties: "Saved Properties",
-  marketInsights: "Market Insights",
-  aiAnalysis: "AI Analysis",
-  investmentCalculator: "Investment Calculator",
-  neighborhoodAnalysis: "Neighborhood Analysis",
-  cmaReports: "CMA Reports",
-  prioritySupport: "Priority Support",
-  apiAccess: "API Access",
-  teamCollaboration: "Team Collaboration",
-  customIntegrations: "Custom Integrations",
-  whiteLabel: "White Label",
-}
-
-export function PlanComparisonModal({ currentPlanId, onUpgrade }: PlanComparisonModalProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [open, setOpen] = useState(false)
+export function PlanComparisonModal({ isOpen, onClose, plans, currentPlanId }: PlanComparisonModalProps) {
+  const [upgrading, setUpgrading] = useState<string | null>(null)
 
   const handleUpgrade = async (planId: string) => {
-    setIsLoading(true)
-    try {
-      await onUpgrade(planId)
-      setOpen(false)
-    } catch (error) {
-      // Error handling is done in the parent component
-    } finally {
-      setIsLoading(false)
-    }
+    setUpgrading(planId)
+    // Simulate upgrade process
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+    setUpgrading(null)
+    onClose()
   }
 
-  const renderFeatureValue = (value: string | boolean) => {
+  const renderFeatureValue = (value: string | boolean, planId: string) => {
     if (typeof value === "boolean") {
       return value ? (
         <Check className="h-4 w-4 text-green-500 mx-auto" />
@@ -134,173 +62,183 @@ export function PlanComparisonModal({ currentPlanId, onUpgrade }: PlanComparison
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="flex items-center space-x-2 bg-transparent">
-          <Scale className="h-4 w-4" />
-          <span>Compare Plans</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[90vh]">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Scale className="h-5 w-5" />
-            <span>Compare Subscription Plans</span>
+          <DialogTitle className="flex items-center gap-2">
+            <Star className="h-5 w-5" />
+            Compare Subscription Plans
           </DialogTitle>
-          <DialogDescription>
-            Choose the perfect plan for your real estate investment needs. Upgrade or downgrade anytime.
-          </DialogDescription>
+          <DialogDescription>Choose the plan that best fits your real estate investment needs</DialogDescription>
         </DialogHeader>
 
-        <ScrollArea className="max-h-[70vh]">
-          {/* Desktop Table View */}
-          <div className="hidden md:block">
-            <div className="overflow-x-auto">
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4 font-medium">Features</th>
-                    {subscriptionPlans.map((plan) => {
-                      const Icon = plan.icon
-                      const isCurrentPlan = plan.id === currentPlanId
-                      return (
-                        <th key={plan.id} className="text-center p-4 min-w-[200px]">
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-center space-x-2">
-                              <Icon className="h-5 w-5" />
-                              <span className="font-semibold">{plan.name}</span>
-                              {isCurrentPlan && (
-                                <Badge variant="secondary" className="text-xs">
-                                  Current
-                                </Badge>
-                              )}
-                              {plan.popular && !isCurrentPlan && <Badge className="text-xs">Popular</Badge>}
-                            </div>
-                            <div className="flex items-baseline justify-center space-x-1">
-                              <span className="text-2xl font-bold">${plan.price}</span>
-                              <span className="text-sm text-muted-foreground">/{plan.interval}</span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">{plan.description}</p>
-                          </div>
-                        </th>
-                      )
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {Object.entries(featureLabels).map(([key, label]) => (
-                    <tr key={key} className="border-b hover:bg-muted/50">
-                      <td className="p-4 font-medium">{label}</td>
-                      {subscriptionPlans.map((plan) => (
-                        <td key={plan.id} className="p-4 text-center">
-                          {renderFeatureValue(plan.features[key as keyof typeof plan.features])}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                  <tr>
-                    <td className="p-4"></td>
-                    {subscriptionPlans.map((plan) => {
-                      const isCurrentPlan = plan.id === currentPlanId
-                      return (
-                        <td key={plan.id} className="p-4">
-                          {isCurrentPlan ? (
-                            <Button disabled className="w-full">
-                              Current Plan
-                            </Button>
-                          ) : (
-                            <Button
-                              onClick={() => handleUpgrade(plan.id)}
-                              disabled={isLoading}
-                              className="w-full"
-                              variant={plan.popular ? "default" : "outline"}
-                            >
-                              {subscriptionPlans.find((p) => p.id === currentPlanId)?.price! < plan.price
-                                ? "Upgrade"
-                                : "Downgrade"}
-                            </Button>
+        {/* Desktop Table View */}
+        <div className="hidden lg:block">
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left p-4 border-b">Features</th>
+                  {plans.map((plan) => (
+                    <th key={plan.id} className="text-center p-4 border-b min-w-[200px]">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2">
+                          <h3 className="font-semibold">{plan.name}</h3>
+                          {plan.popular && <Badge className="bg-primary text-primary-foreground">Popular</Badge>}
+                          {currentPlanId === plan.id && (
+                            <Badge variant="outline" className="bg-green-100 text-green-800">
+                              <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                              Current
+                            </Badge>
                           )}
-                        </td>
-                      )
-                    })}
+                        </div>
+                        <div className="flex items-baseline justify-center space-x-1">
+                          <span className="text-2xl font-bold">${plan.price}</span>
+                          <span className="text-sm text-muted-foreground">/month</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground">{plan.description}</p>
+                      </div>
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {featureMatrix.map((row, index) => (
+                  <tr key={index} className="border-b">
+                    <td className="p-4 font-medium">{row.feature}</td>
+                    <td className="p-4 text-center">{renderFeatureValue(row.starter, "starter")}</td>
+                    <td className="p-4 text-center">{renderFeatureValue(row.professional, "professional")}</td>
+                    <td className="p-4 text-center">{renderFeatureValue(row.enterprise, "enterprise")}</td>
                   </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
-            {subscriptionPlans.map((plan) => {
-              const Icon = plan.icon
-              const isCurrentPlan = plan.id === currentPlanId
-              return (
-                <Card key={plan.id} className={`${plan.popular ? "border-primary" : ""}`}>
-                  <CardHeader>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-2">
-                        <Icon className="h-5 w-5" />
-                        <CardTitle className="text-lg">{plan.name}</CardTitle>
-                        {isCurrentPlan && (
-                          <Badge variant="secondary" className="text-xs">
-                            Current
-                          </Badge>
-                        )}
-                        {plan.popular && !isCurrentPlan && <Badge className="text-xs">Popular</Badge>}
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-baseline space-x-1">
-                          <span className="text-xl font-bold">${plan.price}</span>
-                          <span className="text-sm text-muted-foreground">/{plan.interval}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <CardDescription>{plan.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3 mb-4">
-                      {Object.entries(featureLabels).map(([key, label]) => (
-                        <div key={key} className="flex items-center justify-between">
-                          <span className="text-sm font-medium">{label}</span>
-                          <div className="flex items-center">
-                            {renderFeatureValue(plan.features[key as keyof typeof plan.features])}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                    {isCurrentPlan ? (
-                      <Button disabled className="w-full">
-                        Current Plan
-                      </Button>
-                    ) : (
+                ))}
+                <tr>
+                  <td className="p-4"></td>
+                  {plans.map((plan) => (
+                    <td key={plan.id} className="p-4 text-center">
                       <Button
-                        onClick={() => handleUpgrade(plan.id)}
-                        disabled={isLoading}
                         className="w-full"
-                        variant={plan.popular ? "default" : "outline"}
+                        variant={currentPlanId === plan.id ? "outline" : plan.popular ? "default" : "outline"}
+                        disabled={currentPlanId === plan.id || upgrading === plan.id}
+                        onClick={() => handleUpgrade(plan.id)}
                       >
-                        {subscriptionPlans.find((p) => p.id === currentPlanId)?.price! < plan.price
-                          ? "Upgrade"
-                          : "Downgrade"}
+                        {upgrading === plan.id ? (
+                          <div className="flex items-center gap-2">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Processing...
+                          </div>
+                        ) : currentPlanId === plan.id ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full" />
+                            Current Plan
+                          </div>
+                        ) : (
+                          `${plan.price > (plans.find((p) => p.id === currentPlanId)?.price || 0) ? "Upgrade" : "Downgrade"} to ${plan.name}`
+                        )}
                       </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              )
-            })}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
           </div>
+        </div>
 
-          {/* FAQ Section */}
-          <div className="mt-8 p-4 bg-muted/50 rounded-lg">
-            <h4 className="font-semibold mb-2">Frequently Asked Questions</h4>
-            <div className="space-y-2 text-sm text-muted-foreground">
-              <p>• You can upgrade or downgrade your plan at any time</p>
-              <p>• Changes take effect immediately with prorated billing</p>
-              <p>• All plans include a 30-day money-back guarantee</p>
-              <p>• Enterprise plans include dedicated support and custom onboarding</p>
+        {/* Mobile Card View */}
+        <div className="lg:hidden space-y-4">
+          {plans.map((plan) => (
+            <Card
+              key={plan.id}
+              className={`${plan.popular ? "border-primary" : ""} ${currentPlanId === plan.id ? "bg-primary/5 border-primary/20" : ""}`}
+            >
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <CardTitle>{plan.name}</CardTitle>
+                    {plan.popular && <Badge className="bg-primary text-primary-foreground">Popular</Badge>}
+                    {currentPlanId === plan.id && (
+                      <Badge variant="outline" className="bg-green-100 text-green-800">
+                        <div className="w-2 h-2 bg-green-500 rounded-full mr-1" />
+                        Current
+                      </Badge>
+                    )}
+                  </div>
+                  <div className="flex items-baseline space-x-1">
+                    <span className="text-xl font-bold">${plan.price}</span>
+                    <span className="text-sm text-muted-foreground">/month</span>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">{plan.description}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-2">
+                  {featureMatrix.map((row, index) => {
+                    const value =
+                      plan.id === "starter"
+                        ? row.starter
+                        : plan.id === "professional"
+                          ? row.professional
+                          : row.enterprise
+                    return (
+                      <div key={index} className="flex items-center justify-between py-1">
+                        <span className="text-sm">{row.feature}</span>
+                        <div className="flex items-center">{renderFeatureValue(value, plan.id)}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+                <Button
+                  className="w-full"
+                  variant={currentPlanId === plan.id ? "outline" : plan.popular ? "default" : "outline"}
+                  disabled={currentPlanId === plan.id || upgrading === plan.id}
+                  onClick={() => handleUpgrade(plan.id)}
+                >
+                  {upgrading === plan.id ? (
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Processing...
+                    </div>
+                  ) : currentPlanId === plan.id ? (
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full" />
+                      Current Plan
+                    </div>
+                  ) : (
+                    `${plan.price > (plans.find((p) => p.id === currentPlanId)?.price || 0) ? "Upgrade" : "Downgrade"} to ${plan.name}`
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        {/* FAQ Section */}
+        <div className="mt-8 space-y-4">
+          <h3 className="text-lg font-semibold">Frequently Asked Questions</h3>
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <h4 className="font-medium">Can I change plans anytime?</h4>
+              <p className="text-sm text-muted-foreground">
+                Yes, you can upgrade or downgrade your plan at any time. Changes take effect immediately.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">What happens to my data?</h4>
+              <p className="text-sm text-muted-foreground">
+                All your saved properties and analysis history are preserved when changing plans.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">Is there a money-back guarantee?</h4>
+              <p className="text-sm text-muted-foreground">Yes, we offer a 30-day money-back guarantee on all plans.</p>
+            </div>
+            <div className="space-y-2">
+              <h4 className="font-medium">How does billing work?</h4>
+              <p className="text-sm text-muted-foreground">
+                You're billed monthly in advance. Upgrades are prorated automatically.
+              </p>
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   )
