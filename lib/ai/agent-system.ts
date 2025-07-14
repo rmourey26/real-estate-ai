@@ -14,6 +14,7 @@ import {
   getMarketInsights,
   getOpportunityZones,
 } from "@/lib/api/real-estate"
+import { z } from "zod" // Import zod for z variable
 
 // Define agent types
 export type AgentType =
@@ -176,8 +177,10 @@ export async function runAgent(agentKey: string, prompt: string) {
   }
 
   const model = getModelForProvider(agent.provider)
+  const supabase = createClient()
 
   try {
+    // First attempt: run with tools
     const { text } = await generateText({
       model,
       system: agent.systemPrompt,
@@ -186,44 +189,60 @@ export async function runAgent(agentKey: string, prompt: string) {
       maxSteps: agent.maxSteps || 3,
     })
 
-    // Log the agent run
-    const supabase = createClient()
     await supabase.from("ai_agent_logs").insert({
       agent_name: agent.name,
-      action_type: "generate",
+      action_type: "generate_with_tools",
       details: { prompt, response: text.substring(0, 500) + "..." },
       success: true,
     })
 
     return text
-  } catch (error) {
-    console.error(`Error running agent ${agentKey}:`, error)
+  } catch (error: any) {
+    console.warn(`Agent '${agentKey}' failed with tools. Retrying without tools. Error: ${error.message}`)
 
-    // Log the error
-    const supabase = createClient()
-    await supabase.from("ai_agent_logs").insert({
-      agent_name: agent.name,
-      action_type: "generate",
-      details: { prompt, error: String(error) },
-      success: false,
-      error_message: String(error),
-    })
+    // Fallback: If it fails (e.g., due to a schema error), retry without tools.
+    try {
+      const { text } = await generateText({
+        model,
+        system: agent.systemPrompt,
+        prompt,
+        // No tools on this attempt
+      })
 
-    throw error
+      await supabase.from("ai_agent_logs").insert({
+        agent_name: agent.name,
+        action_type: "generate_fallback",
+        details: { prompt, response: text.substring(0, 500) + "...", originalError: error.message },
+        success: true,
+      })
+
+      return text
+    } catch (fallbackError) {
+      console.error(`Agent '${agentKey}' failed on fallback attempt.`, fallbackError)
+      await supabase.from("ai_agent_logs").insert({
+        agent_name: agent.name,
+        action_type: "generate_failure",
+        details: { prompt, error: String(fallbackError) },
+        success: false,
+        error_message: String(fallbackError),
+      })
+      throw fallbackError
+    }
   }
 }
 
 // Run an agent with a specific prompt and get structured data
-export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: string, schema: any) {
+export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: string, schema: any): Promise<T> {
   const agent = agentRegistry[agentKey]
   if (!agent) {
     throw new Error(`Agent ${agentKey} not found`)
   }
 
   const model = getModelForProvider(agent.provider)
+  const supabase = createClient()
 
   try {
-    const result = await generateObject({
+    const { object } = await generateObject({
       model,
       system: agent.systemPrompt,
       prompt,
@@ -232,24 +251,20 @@ export async function runAgentWithStructuredOutput<T>(agentKey: string, prompt: 
       maxSteps: agent.maxSteps || 3,
     })
 
-    // Log the agent run
-    const supabase = createClient()
     await supabase.from("ai_agent_logs").insert({
       agent_name: agent.name,
       action_type: "generate_structured",
-      details: { prompt, response: JSON.stringify(result).substring(0, 500) + "..." },
+      details: { prompt, response: JSON.stringify(object).substring(0, 500) + "..." },
       success: true,
     })
 
-    return result
+    return object as T
   } catch (error) {
     console.error(`Error running agent ${agentKey} with structured output:`, error)
 
-    // Log the error
-    const supabase = createClient()
     await supabase.from("ai_agent_logs").insert({
       agent_name: agent.name,
-      action_type: "generate_structured",
+      action_type: "generate_structured_failure",
       details: { prompt, error: String(error) },
       success: false,
       error_message: String(error),
@@ -266,8 +281,8 @@ export async function runAgentNetwork(prompts: Record<string, string>) {
     try {
       const result = await runAgent(agentKey, prompt)
       results[agentKey] = result
-    } catch (error) {
-      results[agentKey] = `Error: ${error}`
+    } catch (error: any) {
+      results[agentKey] = `Error: ${error.message}`
     }
   })
 
@@ -280,13 +295,11 @@ export async function storeEmbedding(content: string, metadata: any) {
   const supabase = createClient()
 
   // Generate embedding using OpenAI
-  const { text: embeddingString } = await generateText({
+  const { embedding } = await generateObject({
     model: openai("text-embedding-3-large"),
     prompt: content,
+    schema: z.object({ embedding: z.array(z.number()) }),
   })
-
-  // Parse the embedding string into a vector
-  const embedding = JSON.parse(embeddingString)
 
   // Store in Supabase vector store
   const { error } = await supabase.rpc("match_documents", {
