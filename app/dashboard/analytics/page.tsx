@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
               <CardTitle>Current Market Analysis</CardTitle>
               <CardDescription>AI-generated analysis of current market conditions</CardDescription>
             </CardHeader>
-            <CardContent className="prose max-w-none dark:prose-invert">
+            <CardContent>
               {loading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
@@ -129,7 +129,7 @@ export default function AnalyticsPage() {
                   <Skeleton className="h-4 w-3/4" />
                 </div>
               ) : (
-                marketAnalysis && <div dangerouslySetInnerHTML={{ __html: marketAnalysis }} />
+                marketAnalysis && <p className="text-sm text-muted-foreground whitespace-pre-wrap">{marketAnalysis}</p>
               )}
             </CardContent>
           </Card>
@@ -237,14 +237,16 @@ export default function AnalyticsPage() {
               <CardTitle>AI Market Predictions</CardTitle>
               <CardDescription>AI-generated predictions for future market trends</CardDescription>
             </CardHeader>
-            <CardContent className="prose max-w-none dark:prose-invert">
+            <CardContent>
               {loading ? (
                 <div className="space-y-2">
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-3/4" />
                 </div>
               ) : (
-                trendPrediction && <div dangerouslySetInnerHTML={{ __html: trendPrediction }} />
+                trendPrediction && (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">{trendPrediction}</p>
+                )
               )}
             </CardContent>
           </Card>
