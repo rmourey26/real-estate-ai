@@ -95,11 +95,13 @@ class RepliersApiClient {
   private apiKey: string
   private baseUrl: string
   private region: string
+  private userAgent: string
 
   constructor() {
     this.apiKey = config.repliers.apiKey
     this.baseUrl = config.repliers.baseUrl
     this.region = config.repliers.region
+    this.userAgent = config.repliers.userAgent
   }
 
   private async makeRequest<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T> {
@@ -118,12 +120,16 @@ class RepliersApiClient {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
+        "User-Agent": this.userAgent,
       },
     })
 
     if (!response.ok) {
-      const errorText = await response.text()
-      throw new Error(`Repliers API error (${response.status}): ${errorText}`)
+      const errorBody = await response.text()
+      console.error("Repliers API Error Response:", errorBody)
+      throw new Error(
+        `Repliers API request failed for endpoint: ${endpoint}. Status: ${response.status} ${response.statusText}. Body: ${errorBody}`,
+      )
     }
 
     return response.json() as Promise<T>

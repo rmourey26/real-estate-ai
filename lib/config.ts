@@ -17,6 +17,7 @@ export const config = {
     apiKey: process.env.REPLIERS_API_KEY || "",
     baseUrl: "https://api.repliers.io/v1",
     region: process.env.REPLIERS_REGION || "us",
+    userAgent: "RealEstateAI/1.0.0",
   },
 
   // AI Services
