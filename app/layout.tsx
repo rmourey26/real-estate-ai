@@ -9,7 +9,7 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "RealEstate AI - Market Analysis & Deal Finder",
   description: "AI-powered real estate market analysis and exceptional deal finder",
-    generator: 'v0.dev'
+    generator: 'v0.app'
 }
 
 export default function RootLayout({

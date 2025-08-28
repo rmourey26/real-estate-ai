@@ -106,7 +106,7 @@ class RepliersApiClient {
 
   private async makeRequest<T>(endpoint: string, params: Record<string, string | number> = {}): Promise<T> {
     if (!this.apiKey) {
-      throw new Error("Repliers API key is not configured")
+      throw new Error("Repliers API key is not configured. Please set REPLIERS_API_KEY environment variable.")
     }
 
     const url = new URL(`${this.baseUrl}${endpoint}`)
@@ -115,6 +115,8 @@ class RepliersApiClient {
     })
 
     url.searchParams.append("region", this.region)
+
+    console.log(`Making Repliers API request to: ${url.toString()}`)
 
     const response = await fetch(url.toString(), {
       headers: {
@@ -126,7 +128,21 @@ class RepliersApiClient {
 
     if (!response.ok) {
       const errorBody = await response.text()
-      console.error("Repliers API Error Response:", errorBody)
+      console.error("Repliers API Error Details:", {
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+        body: errorBody,
+        apiKeyPresent: !!this.apiKey,
+        apiKeyLength: this.apiKey?.length || 0,
+      })
+
+      if (response.status === 401) {
+        throw new Error(
+          `Repliers API authentication failed. Please verify your REPLIERS_API_KEY environment variable is correct. Status: ${response.status}`,
+        )
+      }
+
       throw new Error(
         `Repliers API request failed for endpoint: ${endpoint}. Status: ${response.status} ${response.statusText}. Body: ${errorBody}`,
       )
@@ -382,6 +398,31 @@ class RepliersApiClient {
     } catch (error) {
       console.error("Error fetching opportunity zones from Repliers:", error)
       throw error
+    }
+  }
+
+  // Debug method to test API connectivity
+  async testConnection(): Promise<{ success: boolean; message: string }> {
+    try {
+      if (!this.apiKey) {
+        return {
+          success: false,
+          message: "REPLIERS_API_KEY environment variable is not set",
+        }
+      }
+
+      // Try a simple request to test the connection
+      await this.makeRequest<any>("/health", {})
+
+      return {
+        success: true,
+        message: "Repliers API connection successful",
+      }
+    } catch (error) {
+      return {
+        success: false,
+        message: `Repliers API connection failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      }
     }
   }
 }
